@@ -1,0 +1,27 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta http-equiv="content-type" content="text/html; charset=utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Your Blank Canvas!</title><meta name="description" /><meta name="author" /><link rel="stylesheet" href="/styles/style.css" media="screen, projection" /><link rel="stylesheet" href="/styles/print.css" media="print" /></head><body><h1>Welcome to your blank canvas for <a href="https://github.com/balupton/docpad">DocPad</a></h1>
+
+<p>To best use this, follow these steps</p>
+
+<ol><li><a href="http://www.sublimetext.com/2">Download Sublime Text 2</a></li><li>Open it up, press view, layout, rows 3</li><li>Put your <code>src/documents/index.html.md</code> and <code>src/layouts/default.html.coffee</code> in your top row</li><li>Put your <code>src/documents/styles/style.css.styl</code> in the second row</li><li>Put your <code>src/documents/scripts/script.js.coffee</code> in the third row</li></ol>
+
+<p>This is insanely awesome as we also have docpad&#39;s autoupdate plugin enabled. So whenever you make a change, your web browser will notice and refresh :-) How awesome is that!</p>
+
+<p>Later on there will be a nice video here to show you how to utilise all the awesomeness you now have in your possession, for now just refer to the <a href="https://github.com/balupton/docpad/wiki/FAQ">DocPad FAQ</a></p>
+
+<p>Awesome.</p><script src="/_docpad/plugins/admin/scripts/script.js"></script><script src="/nowjs/now.js"></script>
+<script>
+	// Wait for now
+	window.now.ready(function(){
+		// Handshake
+		window.now.docpadHandshake(
+			// Sync notify
+			function (documentId, state) {
+				document.location.reload();
+			},
+			// Callback
+			function (clientId) {
+				console.log('DocPad AutoUpdate plugin now ready');
+			}
+		);
+	});
+</script><script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script><script src="http://cdnjs.cloudflare.com/ajax/libs/modernizr/2.0.6/modernizr.min.js"></script><script src="scripts/script.js"></script></body></html>
