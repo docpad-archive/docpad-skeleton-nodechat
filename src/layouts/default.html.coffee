@@ -28,4 +28,4 @@ html lang: 'en', ->
 		text @blocks.scripts.join('')
 		script src: 'http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js'
 		script src: 'http://cdnjs.cloudflare.com/ajax/libs/modernizr/2.0.6/modernizr.min.js'
-		script src: 'scripts/script.js'
+		script src: '/scripts/script.js'
