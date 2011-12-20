@@ -11,7 +11,7 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 
 	``` bash
 	git clone git://github.com/balupton/canvas.docpad.git
-	cd nodechat.docpad
+	cd canvas.docpad
 	npm install
 	node script.js
 	```
