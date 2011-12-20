@@ -1,13 +1,13 @@
 {
-	"name": "canvas.docpad",
+	"name": "nodechat.docpad",
 	"version": "0.1.0",
-	"description": "The Blank Canvas Skeleton for DocPad. Your web development playground.",
+	"description": "Node Chat (built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap)",
 	"homepage": "https://github.com/balupton/canvas.docpad",
 	"keywords": [
-		"playground",
-		"website",
-		"docpad",
-		"theme"
+		"chat",
+		"irc",
+		"socket.io",
+		"docpad"
 	],
 	"author": {
 		"name": "Benjamin Lupton",
@@ -29,7 +29,7 @@
 		}
 	],
 	"bugs": {
-		"url": "https://github.com/balupton/canvas.docpad/issues"
+		"url": "https://github.com/balupton/nodechat.docpad/issues"
 	},
 	"licenses": [
 		{
@@ -39,21 +39,17 @@
 	],
 	"repository" : {
 		"type" : "git",
-		"url" : "http://github.com/balupton/canvas.docpad.git"
+		"url" : "http://github.com/balupton/nodechat.docpad.git"
 	},
 	"dependencies": {
 		"coffee-script": "1.1.x",
 		"express": "2.5.x",
-		"docpad": "2.4.0"
+		"docpad": "2.5.x",
+		"socket.io": "0.8.x"
 	},
 	"engines" : {
 		"node": ">=0.4.0"
 	},
 	"docpad": {
-		"enabledPlugins": {
-			"admin": true,
-			"rest": true,
-			"autoupdate": true
-		}
 	}
 }

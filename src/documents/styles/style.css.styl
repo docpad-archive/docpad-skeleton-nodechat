@@ -1,4 +1,43 @@
 // Reset
-@import 'https://raw.github.com/necolas/normalize.css/master/normalize.css'
+@import 'bootstrap.css'
 
-// Your Styles
+#views
+	display: none
+
+.userForm.view
+	.input
+		width: 98%
+		margin-bottom: 1em
+		height: 2em
+
+.messages.view
+	td.posted
+	th.posted
+		width: 15%
+		text-align: right
+	th.author,
+	td.author
+		width: 10%
+	
+	tbody
+		td.author.wrapper
+			.avatar
+				width: 16px
+				height: 16px
+				float: left
+				margin-right: 4px
+			.id
+				display: none !important
+			.email
+				display: none !important
+
+.app.view
+	> .header
+		.editUserButton
+			margin-top: 5px
+	> .body
+		padding-top: 40px
+		.messageInput
+			width: 96%
+			margin: 0 2% 0 1.5%
+			min-height: 3em
