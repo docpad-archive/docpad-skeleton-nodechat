@@ -1,10 +1,50 @@
 # Node Chat
 # by Benjamin Lupton
 
+# Globals
+webkitNotifications = window.webkitNotifications
+jQuery = window.jQuery
+$ = window.$
+Backbone = window.Backbone
+_ = window._
+
+# Locals
 App =
 	views: {}
 	models: {}
 	collections: {}
+
+
+# =====================================
+# Notifications
+
+# Ensure Permissions
+if webkitNotifications.checkPermission()
+	$(document.body).click ->
+		webkitNotifications.requestPermission()
+		$(document.body).unbind()
+
+# Setup helper
+showNotification = ({title,content,avatar}) ->
+	unless webkitNotifications.checkPermission()
+		# Ensure
+		avatar or= ""
+		title or= "New message"
+		content or= ""
+		timer = null
+		
+		# Create and display notification
+		notification = webkitNotifications.createNotification(avatar, title, content)
+		notification.ondisplay = ->
+			timer = setTimeout(->
+				notification.cancel()
+			, 5000)
+		notification.onclose = ->
+			if timer
+				clearTimeout timer
+				timer = null
+		notification.show()
+
 
 # =====================================
 # Models
@@ -82,12 +122,20 @@ App.models.Message = App.models.Base.extend
 	url: '/message'
 
 	initialize: ->
+		# Super
 		@_initialize()
 
+		# Ensure POsted
 		posted = @get('posted')
-		unless posted
+		if posted
+			@set
+				posted: new Date(posted)
+		else
 			@set
 				posted: new Date()
+		
+		# Chain
+		@
 
 
 # =====================================
@@ -231,6 +279,7 @@ App.views.User = App.views.Base.extend
 		$email.text(email or '').toggle(!!email)
 		$fullname.text(fullname or '').toggle(!!fullname)
 		$avatar.attr('src',avatar or '').toggle(!!avatar)
+		
 		# Chain
 		@
 	
@@ -349,18 +398,12 @@ App.views.App = App.views.Base.extend
 		@_initialize()
 	
 	start: ($container) ->
-		# IO
-		socket = io.connect("http://localhost")
-		socket.on "news", (data) ->
-			console.log data
-			socket.emit "my other event",
-				my: "data"
-		
 		# Prepare
 		system = new App.models.User(
 			username: 'system'
 			email: 'b@lupton.cc'
 		)
+		socket = @options.socket
 		user = new App.models.User()
 		users =  new App.collections.Users()
 		messages = new App.collections.Messages(
@@ -383,6 +426,63 @@ App.views.App = App.views.Base.extend
 		
 		# Chain
 		@
+	
+	addUser: (data) ->
+		#debugger
+		console.log 'user:', data
+
+		# Prepare
+		users = @model.get('users')
+		
+		# Fetch
+		user =
+			if data.id
+				users.get(data.id)
+			else
+				null
+		
+		# Apply
+		if user
+			user = user.set data
+		else
+			user = new App.models.User(data)
+			users.add user
+			Backbone.sync('create',user)
+		
+		# Return the user
+		user
+	
+	addMessage: (data) ->
+		#debugger
+		console.log 'message:', data
+
+		# Prepare
+		messages = @model.get('messages')
+
+		# Fetch
+		message =
+			if data.id
+				messages.get(data.id)
+			else
+				null
+		
+		# Apply
+		if message
+			message = message.set data
+		else
+			data.author = @addUser(data.author)
+			message = new App.models.Message(data)
+			messages.add message
+			Backbone.sync('create',message)
+			if message.get('author').get('id') isnt @model.get('user').get('id')
+				showNotification(
+					title: message.get('author').get('username')+' says:'
+					avatar: message.get('author').get('avatar')
+					content: message.get('content')
+				)
+
+		# Return the message
+		message
 	
 	render: ->
 		# Values
@@ -427,8 +527,8 @@ App.views.App = App.views.Base.extend
 			if event.keyCode is 13 # enter
 				event.preventDefault()
 				message = $messageInput.val()
-				messages.create(
-					user: user
+				@addMessage(
+					author: user.toJSON()
 					content: message
 				)
 				$messageInput.val('')
@@ -440,15 +540,29 @@ App.views.App = App.views.Base.extend
 # =====================================
 # Application
 
-# Config
+# Prepare
 $.timeago.settings.strings.seconds = "moments"
+socket = io.connect('http://localhost:10113/')
 
-# Create
+# Start
 app = new App.views.App(
+	socket: socket
 	container: $('#app')
 	model: new App.models.App()
 )
 app.start()
+
+# Sync
+socket.on 'connect', ->
+	console.log 'connected'
+	socket.on "user", (data) =>
+		console.log 'received user'
+		#debugger
+		app.addUser(data)
+	socket.on "message", (data) =>
+		console.log 'received message'
+		#debugger
+		app.addMessage(data)
 
 # Expose
 window.app = app

@@ -25,15 +25,10 @@ docpadInstance = docpad.createInstance
 	port: docpadPort
 	maxAge: expiresOffset
 	server: docpadServer
-	plugins:
-		admin: requireAuthentication: true
-		rest: requireAuthentication: true
+	extendServer: true
 
 # Extract Logger
 logger = docpadInstance.logger
-
-# IO
-io = io.listen(docpadServer)
 
 
 # -------------------------------------
@@ -44,22 +39,46 @@ io = io.listen(docpadServer)
 
 # Start Server
 # docpadInstance.action 'server'
-docpadInstance.action 'server' # we need the generate for dynamic documents, if you don't utilise dynamic documents, then you just need the server
+docpadInstance.action 'server generate', ->
 
+	# -------------------------------------
+	# Server Extensions
 
-# -------------------------------------
-# Server Extensions
+	# IO
+	io = io.listen(docpadServer)
+	io.sockets.on 'connection', (socket) ->
+		console.log 'connected'
 
-# Place any custom routing here
-# http://expressjs.com/
+		# Disconnect
+		socket.on 'disconnect', ->
+			console.log 'disconnected'
 
-docpadServer.all '/message', (req,res) ->
-	console.log 'asd'
+		# User
+		docpadServer.all '/user', (req,res,next) ->
+			console.log 'user', req.method, req.body
+			# req.method
+			# req.body
+			if req.body and req.method
+				if req.method in ['PUT','POST']
+					socket.broadcast.emit "user", req.body
+			res.contentType('json')
+			res.send(success: true)
 
-io.sockets.on "connection", (socket) ->
-	socket.emit "news", hello: "world"
-	socket.on "my other event", (data) ->
-		console.log data
+		# Message
+		docpadServer.all '/message', (req,res,next) ->
+			console.log 'message', req.method, req.body
+			# req.method
+			# req.body
+			if req.body and req.method
+				if req.method in ['PUT','POST']
+					console.log 'sending message'
+					socket.broadcast.emit "message", req.body
+			res.contentType('json')
+			res.send(success: true)
+
+# IO Events
+#socket.on "my other event", (data) ->
+#	console.log data
 
 # -------------------------------------
 # Exports

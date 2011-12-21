@@ -10,13 +10,19 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 1. Run
 
 	``` bash
-	git clone git://github.com/balupton/canvas.docpad.git
+	git clone git://github.com/balupton/nodechat.docpad.git
 	cd nodechat.docpad
 	npm install
 	node script.js
 	```
 
 1. [Open http://localhost:10113/](http://localhost:10113/)
+
+
+## Todo
+
+- Add the user list
+- Add syncing of user details (e.g. name change)
 
 
 ## License
