@@ -1,5 +1,5 @@
 (function() {
-  var $, App, Backbone, app, jQuery, showNotification, socket, webkitNotifications, _;
+  var $, App, Backbone, MD5, app, jQuery, showNotification, socket, webkitNotifications, _;
 
   webkitNotifications = window.webkitNotifications;
 
@@ -10,6 +10,8 @@
   Backbone = window.Backbone;
 
   _ = window._;
+
+  MD5 = window.MD5;
 
   App = {
     views: {},
@@ -48,20 +50,7 @@
     }
   };
 
-  App.models.Base = Backbone.Model.extend({
-    _initialize: function() {
-      var id;
-      id = this.get('id');
-      if (!id) {
-        return this.set({
-          id: Math.random()
-        });
-      }
-    },
-    initialize: function() {
-      return this._initialize();
-    }
-  });
+  App.models.Base = Backbone.Model.extend({});
 
   App.models.App = App.models.Base.extend({
     defaults: {
@@ -72,59 +61,79 @@
   });
 
   App.models.User = App.models.Base.extend({
+    url: 'user',
     defaults: {
-      username: null,
       email: null,
-      fullname: null,
+      displayname: null,
       avatar: null
     },
-    url: '/user',
     initialize: function() {
-      var avatarHash, avatarSize, avatarUrl, email, id, username;
-      this._initialize();
-      id = this.get('id');
-      email = this.get('email');
+      var cid, username;
+      var _this = this;
+      cid = this.cid;
       username = this.get('username');
       if (!username) {
-        username = "User " + id;
+        username = 'unknown';
         this.set({
           username: username
         });
       }
-      if (email) {
-        avatarSize = 80;
-        avatarHash = window.MD5(email);
-        avatarUrl = "http://www.gravatar.com/avatar/" + avatarSize + ".jpg?s=" + avatarSize;
-      } else {
-        avatarUrl = null;
-      }
-      this.set({
-        avatar: avatarUrl
+      this.bind('change:id', function(model, id) {
+        username = _this.get('username');
+        if (username === 'unknown' || !username) {
+          return _this.set({
+            username: "User " + id
+          });
+        }
+      });
+      this.bind('change:email', function(model, email) {
+        var avatarHash, avatarSize, avatarUrl;
+        if (email) {
+          avatarSize = 80;
+          avatarHash = MD5(email);
+          avatarUrl = "http://www.gravatar.com/avatar/" + avatarSize + ".jpg?s=" + avatarSize;
+        } else {
+          avatarUrl = null;
+        }
+        return _this.set({
+          avatar: avatarUrl
+        });
       });
       return this;
     }
   });
 
   App.models.Message = App.models.Base.extend({
+    url: 'message',
     defaults: {
       posted: null,
       content: null,
       author: null
     },
-    url: '/message',
     initialize: function() {
       var posted;
-      this._initialize();
       posted = this.get('posted');
-      if (posted) {
-        this.set({
-          posted: new Date(posted)
-        });
-      } else {
-        this.set({
-          posted: new Date()
-        });
-      }
+      this.bind('change:author', function(model, author) {
+        if (author) {
+          if (!(author instanceof App.models.User)) {
+            return this.set({
+              author: new App.models.User(author)
+            });
+          }
+        }
+      });
+      this.bind('change:posted', function(model, posted) {
+        if (posted) {
+          if (!(posted instanceof Date)) {
+            return this.set({
+              posted: new Date(posted)
+            });
+          }
+        }
+      });
+      this.set({
+        posted: !posted ? new Date() : void 0
+      });
       return this;
     }
   });
@@ -189,7 +198,8 @@
           email: $email.val(),
           fullname: $fullname.val()
         });
-        return _this.hide();
+        _this.hide();
+        return _this.trigger('update', _this.model);
       });
       $cancelButton.add($closeButton).click(function() {
         _this.hide();
@@ -203,6 +213,54 @@
     },
     show: function() {
       this.el.show();
+      return this;
+    }
+  });
+
+  App.views.Users = App.views.Base.extend({
+    initialize: function() {
+      var _this = this;
+      this.el = $('#views > .users.view').clone().data('view', this);
+      this.model.bind('add', function(user) {
+        return _this.addUser(user);
+      });
+      this.model.bind('remove', function(user) {
+        return _this.removeUser(user);
+      });
+      return this._initialize();
+    },
+    addUser: function(user) {
+      var $userList, userId, userKey;
+      $userList = this.$('.userList');
+      userId = user.get('id');
+      userKey = "user-" + userId;
+      this.views[userKey] = new App.views.User({
+        model: user,
+        container: $userList
+      }).render();
+      return this;
+    },
+    removeUser: function(user) {
+      var $userList, userId, userKey;
+      $userList = this.$('.userList');
+      userId = user.get('id');
+      userKey = "user-" + userId;
+      this.views[userKey].remove();
+      return this;
+    },
+    populate: function() {
+      var $userLIst, users;
+      var _this = this;
+      this.views = {};
+      users = this.model;
+      $userLIst = this.$('.userLIst').empty();
+      users.each(function(user) {
+        return _this.addUser(user);
+      });
+      return this;
+    },
+    render: function() {
+      this.populate();
       return this;
     }
   });
@@ -314,97 +372,149 @@
       return this._initialize();
     },
     start: function($container) {
-      var messages, socket, system, user, users;
+      var me, messages, socket, system, user, users;
       var _this = this;
+      me = this;
+      socket = this.options.socket;
       system = new App.models.User({
         username: 'system',
         email: 'b@lupton.cc'
       });
-      socket = this.options.socket;
       user = new App.models.User();
       users = new App.collections.Users();
-      messages = new App.collections.Messages(new App.models.Message({
-        author: system,
-        content: 'Welcome!'
-      }));
+      messages = new App.collections.Messages();
       this.model.set({
-        system: system,
         user: user,
         users: users,
         messages: messages
       });
-      $(function() {
-        return _this.render();
+      messages.bind('add', function(message) {
+        var messageAuthor;
+        messageAuthor = message.get('author');
+        if (messageAuthor.get('id') === user.get('id')) return;
+        return showNotification({
+          title: messageAuthor.get('username') + ' says:',
+          avatar: messageAuthor.get('avatar'),
+          content: message.get('content')
+        });
+      });
+      socket.on('connect', function() {
+        return socket.emit('handshake1', function(err, userId) {
+          if (err) throw err;
+          user.set({
+            id: userId
+          });
+          return socket.emit('handshake2', user, function(err, _users) {
+            var username;
+            var _this = this;
+            if (err) throw err;
+            username = user.get('username');
+            user.save();
+            users.add(user);
+            messages.add(new App.models.Message({
+              author: system,
+              content: "Welcome " + username
+            }));
+            _.each(_users, function(_user) {
+              return me.user('add', _user);
+            });
+            return $(function() {
+              return me.render();
+            });
+          });
+        });
+      });
+      socket.on('user', function(method, data) {
+        return _this.user(method, data);
+      });
+      socket.on('message', function(method, data) {
+        return _this.message(method, data);
       });
       return this;
     },
-    addUser: function(data) {
+    user: function(method, data) {
       var user, users;
-      console.log('user:', data);
       users = this.model.get('users');
-      user = data.id ? users.get(data.id) : null;
-      if (user) {
-        user = user.set(data);
-      } else {
-        user = new App.models.User(data);
-        users.add(user);
-        Backbone.sync('create', user);
+      switch (method) {
+        case 'delete':
+        case 'remove':
+          users.remove(data.id);
+          break;
+        case 'create':
+        case 'update':
+        case 'add':
+          user = users.get(data.id);
+          if (user) {
+            user.set(data);
+          } else {
+            user = new App.models.User();
+            user.set(data);
+            users.add(user);
+          }
       }
-      return user;
+      return this;
     },
-    addMessage: function(data) {
+    message: function(method, data) {
       var message, messages;
-      console.log('message:', data);
       messages = this.model.get('messages');
-      message = data.id ? messages.get(data.id) : null;
-      if (message) {
-        message = message.set(data);
-      } else {
-        data.author = this.addUser(data.author);
-        message = new App.models.Message(data);
-        messages.add(message);
-        Backbone.sync('create', message);
-        if (message.get('author').get('id') !== this.model.get('user').get('id')) {
-          showNotification({
-            title: message.get('author').get('username') + ' says:',
-            avatar: message.get('author').get('avatar'),
-            content: message.get('content')
-          });
-        }
+      switch (method) {
+        case 'delete':
+        case 'remove':
+          messages.remove(data.id);
+          break;
+        case 'create':
+        case 'update':
+        case 'add':
+          message = messages.get(data.id);
+          if (message) {
+            message.set(data);
+          } else {
+            message = new App.models.Message();
+            message.set(data);
+            messages.add(message);
+          }
       }
-      return message;
+      return this;
     },
     render: function() {
-      var $editUserButton, $messageInput, $messages, $userForm, messages, user;
+      var $editUserButton, $messageInput, $messages, $userForm, $users, messages, user, users;
       var _this = this;
       user = this.model.get('user');
+      users = this.model.get('users');
       messages = this.model.get('messages');
       $editUserButton = this.$('.editUserButton');
       $messages = this.$('.messages.wrapper');
       $userForm = this.$('.userForm.wrapper');
+      $users = this.$('.users.wrapper');
       $messageInput = this.$('.messageInput');
       this.views = {};
       this.views.messages = new App.views.Messages({
         model: messages,
         container: $messages
       }).render();
+      this.views.users = new App.views.Users({
+        model: users,
+        container: $users
+      }).render();
       this.views.userForm = new App.views.UserForm({
         model: user,
         container: $userForm
       }).render().hide();
       $editUserButton.click(function() {
-        return _this.views.userForm.show();
+        return _this.views.userForm.show().bind('update', function(user) {
+          return user.save();
+        });
       });
       $messageInput.bind('keypress', function(event) {
-        var message;
+        var messageContent;
         if (event.keyCode === 13) {
           event.preventDefault();
-          message = $messageInput.val();
-          _this.addMessage({
-            author: user.toJSON(),
-            content: message
+          messageContent = $messageInput.val();
+          $messageInput.val('');
+          return messages.create({
+            author: user,
+            content: messageContent
           });
-          return $messageInput.val('');
         }
       });
       return this;
@@ -415,6 +525,15 @@
 
   socket = io.connect('http://localhost:10113/');
 
+  Backbone.sync = function(method, model, options) {
+    var data;
+    data = model.toJSON();
+    return socket.emit(model.url, method, data, function(err, data) {
+      if (err) throw err;
+      return typeof options.success === "function" ? options.success(data) : void 0;
+    });
+  };
+
   app = new App.views.App({
     socket: socket,
     container: $('#app'),
@@ -422,19 +541,6 @@
   });
 
   app.start();
-
-  socket.on('connect', function() {
-    var _this = this;
-    console.log('connected');
-    socket.on("user", function(data) {
-      console.log('received user');
-      return app.addUser(data);
-    });
-    return socket.on("message", function(data) {
-      console.log('received message');
-      return app.addMessage(data);
-    });
-  });
 
   window.app = app;
 

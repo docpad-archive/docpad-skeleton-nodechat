@@ -25,6 +25,7 @@ div "#views", ->
 		div ".body", ->
 			div ".messages.wrapper", ->
 			textarea ".messageInput", placeholder: "Your message..."
+			div ".users.wrapper", ->
 		div ".userForm.wrapper", ->
 
 
@@ -55,7 +56,7 @@ div "#views", ->
 
 	# Users
 	div ".users.view", ->
-		ul ".userList", ->
+		div ".userList", ->
 
 
 	# ---------------------------------

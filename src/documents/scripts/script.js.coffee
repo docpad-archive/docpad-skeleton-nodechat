@@ -7,6 +7,7 @@ jQuery = window.jQuery
 $ = window.$
 Backbone = window.Backbone
 _ = window._
+MD5 = window.MD5
 
 # Locals
 App =
@@ -17,14 +18,22 @@ App =
 
 # =====================================
 # Notifications
+# The code for google chrome notifications
+# These are used for notifying the user of a new message
+# They display an avatar, title and content
 
 # Ensure Permissions
+# If we don't have permissions, we will have to request them
 if webkitNotifications.checkPermission()
+	# Permissions can only be enabled from a user event
+	# So do a dodgy hack to ensure they will be enabled
+	# (when a user clicks anywhere of the page, we request the permissions)
 	$(document.body).click ->
 		webkitNotifications.requestPermission()
 		$(document.body).unbind()
 
 # Setup helper
+# Provide a simpler API for our notifications
 showNotification = ({title,content,avatar}) ->
 	unless webkitNotifications.checkPermission()
 		# Ensure
@@ -52,15 +61,7 @@ showNotification = ({title,content,avatar}) ->
 # -------------------------------------
 # Base
 
-App.models.Base = Backbone.Model.extend
-	_initialize: ->
-		id = @get('id')
-		unless id
-			@set id: Math.random()
-	
-	initialize: ->
-		@_initialize()
-
+App.models.Base = Backbone.Model.extend({})
 
 # -------------------------------------
 # App
@@ -76,35 +77,36 @@ App.models.App = App.models.Base.extend
 # User
 
 App.models.User = App.models.Base.extend
+	url: 'user'
+
 	defaults:
-		username: null # [a-Z\.\-\_]
 		email: null # email
-		fullname: null # string
+		displayname: null # string
 		avatar: null # url
 	
-	url: '/user'
-	
 	initialize: ->
-		@_initialize()
-
 		# Fetch values
-		id = @get('id')
-		email = @get('email')
+		cid = @cid
 		username = @get('username')
 
 		# Ensure username
 		unless username
-			username = "User #{id}"
-			@set username: username
+			username = 'unknown'
+			@set {username}
+		@bind 'change:id', (model,id) =>
+			username = @get('username')
+			if username is 'unknown' or !username
+				@set username: "User #{id}"
 		
-		# Update Gravatar
-		if email
-			avatarSize = 80
-			avatarHash = window.MD5(email)
-			avatarUrl = "http://www.gravatar.com/avatar/#{avatarSize}.jpg?s=#{avatarSize}"
-		else
-			avatarUrl = null
-		@set avatar: avatarUrl
+		# Ensure Gravatar
+		@bind 'change:email', (model,email) =>
+			if email
+				avatarSize = 80
+				avatarHash = MD5(email)
+				avatarUrl = "http://www.gravatar.com/avatar/#{avatarSize}.jpg?s=#{avatarSize}"
+			else
+				avatarUrl = null
+			@set avatar: avatarUrl
 
 		# Chain
 		@
@@ -114,26 +116,30 @@ App.models.User = App.models.Base.extend
 # Message
 
 App.models.Message = App.models.Base.extend
+	url: 'message'
+
 	defaults:
 		posted: null # datetime
 		content: null # string
 		author: null # user
 	
-	url: '/message'
-
 	initialize: ->
-		# Super
-		@_initialize()
-
-		# Ensure POsted
+		# Fetch values
 		posted = @get('posted')
-		if posted
-			@set
-				posted: new Date(posted)
-		else
-			@set
-				posted: new Date()
+
+		# Ensure Author
+		@bind 'change:author', (model,author) ->
+			if author
+				unless author instanceof App.models.User
+					@set author: new App.models.User(author)
 		
+		# Ensure Posted
+		@bind 'change:posted', (model,posted) ->
+			if posted
+				unless posted instanceof Date
+					@set posted: new Date(posted)
+		@set posted: new Date()  unless posted
+			
 		# Chain
 		@
 
@@ -227,6 +233,7 @@ App.views.UserForm = App.views.Base.extend
 				email: $email.val()
 				fullname: $fullname.val()
 			@hide()
+			@trigger 'update', @model
 		$cancelButton.add($closeButton).click =>
 			@hide()
 			@populate()
@@ -242,6 +249,70 @@ App.views.UserForm = App.views.Base.extend
 		@el.show()
 		@
 
+
+# -------------------------------------
+# Users
+
+App.views.Users = App.views.Base.extend
+	initialize: ->
+		# Fetch
+		@el = $('#views > .users.view').clone().data('view',@)
+		
+		# Model Events
+		@model.bind 'add', (user) =>
+			@addUser user
+		@model.bind 'remove', (user) =>
+			@removeUser user
+		
+		# Super
+		@_initialize()
+	
+	addUser: (user) ->
+		# Prepare
+		$userList = @$('.userList')
+
+		# User
+		userId = user.get('id')
+		userKey = "user-#{userId}"
+		@views[userKey] = new App.views.User(
+			model: user
+			container: $userList
+		).render()
+
+		# Chain
+		@
+	
+	removeUser: (user) ->
+		# Prepare
+		$userList = @$('.userList')
+
+		# User
+		userId = user.get('id')
+		userKey = "user-#{userId}"
+		@views[userKey].remove()
+
+		# Chain
+		@
+	
+	populate: ->
+		# Prepare
+		@views = {}
+		users = @model
+		$userLIst = @$('.userLIst').empty()
+
+		# Messages
+		users.each (user) =>
+			@addUser(user)
+		
+		# Chain
+		@
+	
+	render: ->
+		# Prepare
+		@populate()
+
+		# Chain
+		@
 
 # -------------------------------------
 # User
@@ -399,100 +470,99 @@ App.views.App = App.views.Base.extend
 	
 	start: ($container) ->
 		# Prepare
+		me = @
+		socket = @options.socket
+
+		# Models
 		system = new App.models.User(
 			username: 'system'
 			email: 'b@lupton.cc'
 		)
-		socket = @options.socket
 		user = new App.models.User()
-		users =  new App.collections.Users()
-		messages = new App.collections.Messages(
-			new App.models.Message(
-				author: system
-				content: 'Welcome!'
-			)
-		)
-
-		# Model
-		@model.set
-			system: system
-			user: user
-			users: users
-			messages: messages
-
-		# DomReady
-		$ =>
-			@render()
+		users = new App.collections.Users()
+		messages = new App.collections.Messages()
+		@model.set {user,users,messages}
 		
+		# Events
+		messages.bind 'add', (message) =>
+			messageAuthor = message.get('author')
+			return  if messageAuthor.get('id') is user.get('id')
+			showNotification(
+				title: messageAuthor.get('username')+' says:'
+				avatar: messageAuthor.get('avatar')
+				content: message.get('content')
+			)
+
+		# Handshake
+		socket.on 'connect', =>
+			socket.emit 'handshake1', (err,userId) ->
+				throw err  if err
+				user.set id: userId
+				socket.emit 'handshake2', user, (err,_users) ->
+					throw err  if err
+					username = user.get('username')
+					user.save()
+					users.add(user)
+					messages.add new App.models.Message(
+						author: system
+						content: "Welcome #{username}"
+					)
+					_.each _users, (_user) ->
+						me.user 'add', _user
+					$ => me.render()
+
+		# User
+		socket.on 'user', (method,data) =>
+			@user(method,data)
+		
+		# Message
+		socket.on 'message', (method,data) =>
+			@message(method,data)
+
 		# Chain
 		@
 	
-	addUser: (data) ->
-		#debugger
-		console.log 'user:', data
-
-		# Prepare
+	user: (method,data) ->
 		users = @model.get('users')
-		
-		# Fetch
-		user =
-			if data.id
-				users.get(data.id)
-			else
-				null
-		
-		# Apply
-		if user
-			user = user.set data
-		else
-			user = new App.models.User(data)
-			users.add user
-			Backbone.sync('create',user)
-		
-		# Return the user
-		user
+		switch method
+			when 'delete','remove'
+				users.remove(data.id)
+			when 'create','update','add'
+				user = users.get(data.id)
+				if user
+					user.set(data)
+				else
+					user = new App.models.User()
+					user.set data
+					users.add(user)
+		@
 	
-	addMessage: (data) ->
-		#debugger
-		console.log 'message:', data
-
-		# Prepare
+	message: (method,data) ->
 		messages = @model.get('messages')
+		switch method
+			when 'delete','remove'
+				messages.remove(data.id)
+			when 'create','update','add'
+				message = messages.get(data.id)
+				if message
+					message.set(data)
+				else
+					message = new App.models.Message()
+					message.set data
+					messages.add(message)
+		@
 
-		# Fetch
-		message =
-			if data.id
-				messages.get(data.id)
-			else
-				null
-		
-		# Apply
-		if message
-			message = message.set data
-		else
-			data.author = @addUser(data.author)
-			message = new App.models.Message(data)
-			messages.add message
-			Backbone.sync('create',message)
-			if message.get('author').get('id') isnt @model.get('user').get('id')
-				showNotification(
-					title: message.get('author').get('username')+' says:'
-					avatar: message.get('author').get('avatar')
-					content: message.get('content')
-				)
-
-		# Return the message
-		message
-	
 	render: ->
 		# Values
 		user = @model.get('user')
+		users = @model.get('users')
 		messages = @model.get('messages')
 
 		# Elements
 		$editUserButton = @$('.editUserButton')
 		$messages = @$('.messages.wrapper')
 		$userForm = @$('.userForm.wrapper')
+		$users = @$('.users.wrapper')
 		$messageInput = @$('.messageInput')
 
 
@@ -508,6 +578,12 @@ App.views.App = App.views.Base.extend
 			container: $messages
 		).render()
 
+		# Users
+		@views.users = new App.views.Users(
+			model: users
+			container: $users
+		).render()
+
 		# User Form
 		@views.userForm = new App.views.UserForm(
 			model: user
@@ -520,18 +596,19 @@ App.views.App = App.views.Base.extend
 	
 		# Edit User
 		$editUserButton.click =>
-			@views.userForm.show()
+			@views.userForm.show().bind 'update', (user) ->
+				user.save()
 	
 		# Send Message
 		$messageInput.bind 'keypress', (event) =>
 			if event.keyCode is 13 # enter
 				event.preventDefault()
-				message = $messageInput.val()
-				@addMessage(
-					author: user.toJSON()
-					content: message
-				)
+				messageContent = $messageInput.val()
 				$messageInput.val('')
+				messages.create(
+					author: user
+					content: messageContent
+				)
 		
 		# Chain
 		@
@@ -544,6 +621,13 @@ App.views.App = App.views.Base.extend
 $.timeago.settings.strings.seconds = "moments"
 socket = io.connect('http://localhost:10113/')
 
+# Sync
+Backbone.sync = (method,model,options) ->
+	data = model.toJSON()
+	socket.emit model.url, method, data, (err,data) ->
+		throw err  if err
+		options.success?(data)
+
 # Start
 app = new App.views.App(
 	socket: socket
@@ -551,18 +635,6 @@ app = new App.views.App(
 	model: new App.models.App()
 )
 app.start()
-
-# Sync
-socket.on 'connect', ->
-	console.log 'connected'
-	socket.on "user", (data) =>
-		console.log 'received user'
-		#debugger
-		app.addUser(data)
-	socket.on "message", (data) =>
-		console.log 'received message'
-		#debugger
-		app.addMessage(data)
 
 # Expose
 window.app = app

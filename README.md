@@ -21,8 +21,8 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 
 ## Todo
 
-- Add the user list
-- Add syncing of user details (e.g. name change)
+- User list needs styling
+- Document
 
 
 ## License
