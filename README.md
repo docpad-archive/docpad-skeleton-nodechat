@@ -13,7 +13,7 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 	git clone git://github.com/balupton/nodechat.docpad.git
 	cd nodechat.docpad
 	npm install
-	node script.js
+	node script.js [port]
 	```
 
 1. [Open http://localhost:10113/](http://localhost:10113/)
