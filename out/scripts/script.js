@@ -391,6 +391,41 @@
     }
   });
 
+  App.views.Modal = App.views.Base.extend({
+    initialize: function() {
+      this.el = $('#views > .modal.view').clone().data('view', this);
+      return this._initialize();
+    },
+    populate: function() {
+      var $button, $content, $footer, $primary, $title, button, buttons, content, title, _i, _len;
+      var _this = this;
+      title = this.options.title;
+      content = this.options.content;
+      buttons = this.options.buttons || [];
+      $title = this.$('.title');
+      $content = this.$('.content');
+      $primary = this.$('.primary');
+      $footer = this.$('.footer');
+      $title.text(title || '').toggle(!!title);
+      $content.text(content || '').toggle(!!content);
+      $footer.empty();
+      for (_i = 0, _len = buttons.length; _i < _len; _i++) {
+        button = buttons[_i];
+        $button = $('<button>').addClass('btn').text(button.text || 'Ok');
+        if (button.primary) $button.addClass('primary');
+        $button.click(button.click || function() {
+          return _this.remove();
+        });
+        $button.appendTo($footer);
+      }
+      return this;
+    },
+    render: function() {
+      this.populate();
+      return this;
+    }
+  });
+
   App.views.Notification = App.views.Base.extend({
     initialize: function() {
       this.el = $('#views > .notification.view').clone().data('view', this);
@@ -449,10 +484,12 @@
       }, 100);
     },
     start: function($container) {
-      var me, messages, socket, system, user, users;
+      var connectedOnce, disconnectedModal, me, messages, socket, system, user, users;
       var _this = this;
       me = this;
       socket = this.options.socket;
+      disconnectedModal = null;
+      connectedOnce = false;
       users = new App.collections.Users();
       messages = new App.collections.Messages();
       this.model.set({
@@ -482,6 +519,14 @@
         }
       });
       socket.on('connect', function() {
+        if (connectedOnce === true) {
+          window.location.reload();
+          return;
+        }
+        if (disconnectedModal) {
+          disconnectedModal.remove();
+          disconnectedModal = null;
+        }
         return socket.emit('handshake1', function(err, userId) {
           if (err) throw err;
           user.set({
@@ -490,9 +535,16 @@
           return socket.emit('handshake2', user, function(err, _users) {
             if (err) throw err;
             user.save();
-            _this.systemMessage('welcome', {
-              user: user
-            });
+            if (connectedOnce === true) {
+              _this.systemMessage('reconnected', {
+                user: user
+              });
+            } else {
+              connectedOnce = true;
+              _this.systemMessage('welcome', {
+                user: user
+              });
+            }
             _.each(_users, function(_user) {
               return _this.user('add', _user);
             });
@@ -501,6 +553,22 @@
             });
           });
         });
+      });
+      socket.on('disconnect', function() {
+        return disconnectedModal = new App.views.Modal({
+          title: 'You have been disconnected',
+          content: 'Try refreshing your browser',
+          container: _this.el,
+          buttons: [
+            {
+              text: 'Refresh',
+              primary: true,
+              click: function() {
+                return window.location.reload();
+              }
+            }
+          ]
+        }).render();
       });
       socket.on('user', function(method, data) {
         return _this.user(method, data);
@@ -513,6 +581,16 @@
     systemMessage: function(code, data) {
       var ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref2;
       switch (code) {
+        case 'reconnected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user');
+          this.message('create', {
+            author: this.model.get('system'),
+            content: "Welcome back <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
+          });
+          break;
         case 'welcome':
           user = data.user;
           userColor = user.get('color');
@@ -641,17 +719,20 @@
       $messageInput = this.$('.messageInput');
       $notificationList = this.$('.notificationList');
       this.views = {};
+      if (this.views.messages) this.views.messages.remove();
       this.views.messages = new App.views.Messages({
         model: messages,
-        container: $messages
+        container: $messages.empty()
       }).render();
+      if (this.views.users) this.views.users.remove();
       this.views.users = new App.views.Users({
         model: users,
-        container: $users
+        container: $users.empty()
       }).render();
+      if (this.views.userForm) this.views.userForm.remove();
       this.views.userForm = new App.views.UserForm({
         model: user,
-        container: $userForm
+        container: $userForm.empty()
       }).render().hide().bind('update', function(user) {
         var notification;
         user.save();
@@ -660,10 +741,10 @@
           container: $notificationList
         }).render();
       });
-      $editUserButton.click(function() {
+      $editUserButton.unbind().click(function() {
         return _this.views.userForm.show();
       });
-      $messageInput.bind('keypress', function(event) {
+      $messageInput.unbind().bind('keypress', function(event) {
         var message, messageContent;
         if (event.keyCode === 13) {
           event.preventDefault();
@@ -678,6 +759,9 @@
       });
       $messageInput.focus();
       this.resize();
+      $(window).unbind().resize(function() {
+        return _this.resize();
+      });
       return this;
     }
   });

@@ -40,22 +40,32 @@ div "#views", ->
 				div '.inner', ->
 					h3 '.title', ->
 					div '.content', ->
-		
+
+	# Modal
+	div ".modal.view", ->
+		header ".header.modal-header", ->
+			a ".close", -> 'x'
+			h3 ".title", ->
+		div ".body.modal-body", ->
+			span ".content", ->
+		footer ".footer.modal-footer", ->
+
 	
 	# ---------------------------------
 	# Users
 
 	# User Form
-	div ".userForm.view.modal", ->
-		header ".header.modal-header", ->
-			a ".close", -> 'x'
-			h3 "Edit Details"
-		div ".body.modal-body", ->
-			input ".input.displayname.optional", type: 'text', placeholder: 'Display name'
-			input ".input.email.optional", type: 'text', placeholder: 'Email'
-		footer ".footer.modal-footer", ->
-			button ".cancelButton.btn.secondary", -> "Cancel"
-			button ".submitButton.btn.primary", -> "Update Details"
+	div ".userForm.view", ->
+		div '.modal', ->
+			header ".header.modal-header", ->
+				a ".close", -> 'x'
+				h3 "Edit Details"
+			div ".body.modal-body", ->
+				input ".input.displayname.optional", type: 'text', placeholder: 'Display name'
+				input ".input.email.optional", type: 'text', placeholder: 'Email'
+			footer ".footer.modal-footer", ->
+				button ".cancelButton.btn.secondary", -> "Cancel"
+				button ".submitButton.btn.primary", -> "Update Details"
 
 	# User
 	div ".user.view", ->

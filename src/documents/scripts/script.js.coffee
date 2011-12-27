@@ -477,6 +477,51 @@ App.views.Message = App.views.Base.extend
 
 
 # -------------------------------------
+# Modal
+
+App.views.Modal = App.views.Base.extend
+	initialize: ->
+		# Fetch
+		@el = $('#views > .modal.view').clone().data('view',@)
+		
+		# Super
+		@_initialize()
+	
+	populate: ->
+		# Fetch
+		title = @options.title
+		content = @options.content
+		buttons = @options.buttons or []
+
+		# Elements
+		$title = @$('.title')
+		$content = @$('.content')
+		$primary = @$('.primary')
+		$footer = @$('.footer')
+
+		# Populate
+		$title.text(title or '').toggle(!!title)
+		$content.text(content or '').toggle(!!content)
+
+		# Events
+		$footer.empty()
+		for button in buttons
+			$button = $('<button>').addClass('btn').text(button.text or 'Ok')
+			$button.addClass('primary')  if button.primary
+			$button.click  button.click  or  => @remove()
+			$button.appendTo $footer
+
+		# Chain
+		@
+
+	render: ->
+		# Prepare
+		@populate()
+
+		# Chain
+		@
+
+# -------------------------------------
 # Notification
 
 App.views.Notification = App.views.Base.extend
@@ -554,6 +599,8 @@ App.views.App = App.views.Base.extend
 		# Prepare
 		me = @
 		socket = @options.socket
+		disconnectedModal = null
+		connectedOnce = false
 
 		# Collections
 		users = new App.collections.Users()
@@ -585,33 +632,75 @@ App.views.App = App.views.Base.extend
 
 		# Handshake
 		socket.on 'connect', =>
+			# For now we do not support reconnections, so just refresh the entire page
+			if connectedOnce is true
+				window.location.reload()
+				return
+			
+			# If we do support reconnections, hide the disconnected modal if it exists
+			if disconnectedModal
+				disconnectedModal.remove()  
+				disconnectedModal = null
+			
+			# Start our handshake to retrieve a new userId
 			socket.emit 'handshake1', (err,userId) =>
 				throw err  if err
+
+				# We now have our new userId, so let's set it and start the second part of the handshake
 				user.set id: userId
 				socket.emit 'handshake2', user, (err,_users) =>
 					throw err  if err
 
-					# Save us
+					# We've now applied our user to the server-side
+					# and retrieved back a list of connected users
+
+					# So let's save our existing user back to the server side
+					# as we have some client side logic in regards to display names and defaults that we want to reflect
 					user.save()
 
-					# Message
-					@systemMessage 'welcome', {
-						user: user
-					}
+					# Show the appropriate message dependening on whether this is a connection or reconnection
+					if connectedOnce is true
+						@systemMessage 'reconnected', {
+							user: user
+						}
+					else
+						connectedOnce = true
+						@systemMessage 'welcome', {
+							user: user
+						}
 
-					# Add other users
+					# Add the connected users to our application
 					_.each _users, (_user) =>
 						@user 'add', _user
 					
-					# Render
+					# Finally, render our application when the DOM is ready
 					$ => @render()
 
+		# Disconnect
+		socket.on 'disconnect', =>
+			# We have been disconnected from the server, so let's show a modal prompting the user to refresh the browser
+			disconnectedModal = new App.views.Modal(
+				title: 'You have been disconnected'
+				content: 'Try refreshing your browser'
+				container: @el
+				buttons: [
+					{
+						text: 'Refresh'
+						primary: true
+						click: ->
+							window.location.reload()
+					}
+				]
+			).render()
+		
 		# User
 		socket.on 'user', (method,data) =>
+			# We have received some changes to a user
 			@user(method,data)
 		
 		# Message
 		socket.on 'message', (method,data) =>
+			# We have received some changes to a message
 			@message(method,data)
 
 		# Chain
@@ -620,6 +709,16 @@ App.views.App = App.views.Base.extend
 	systemMessage: (code,data) ->
 		# Create
 		switch code
+			when 'reconnected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user')
+				@message 'create', {
+					author: @model.get('system')
+					content: "Welcome back <span style='color:#{userColor}'>#{userDisplayName}</span>"
+				}
+			
 			when 'welcome'
 				user = data.user
 				userColor = user.get('color')
@@ -753,21 +852,24 @@ App.views.App = App.views.Base.extend
 		@views = {}
 
 		# Messages
+		@views.messages.remove()  if @views.messages
 		@views.messages = new App.views.Messages(
 			model: messages
-			container: $messages
+			container: $messages.empty()
 		).render()
 
 		# Users
+		@views.users.remove()  if @views.users
 		@views.users = new App.views.Users(
 			model: users
-			container: $users
+			container: $users.empty()
 		).render()
 
 		# User Form
+		@views.userForm.remove()  if @views.userForm
 		@views.userForm = new App.views.UserForm(
 			model: user
-			container: $userForm
+			container: $userForm.empty()
 		).render().hide().bind 'update', (user) ->
 			user.save()
 			notification = new App.views.Notification(
@@ -780,11 +882,11 @@ App.views.App = App.views.Base.extend
 		# Element Events
 	
 		# Edit User
-		$editUserButton.click =>
+		$editUserButton.unbind().click =>
 			@views.userForm.show()
 		
 		# Send Message
-		$messageInput.bind 'keypress', (event) =>
+		$messageInput.unbind().bind 'keypress', (event) =>
 			if event.keyCode is 13 # enter
 				event.preventDefault()
 				messageContent = $messageInput.val()
@@ -800,6 +902,7 @@ App.views.App = App.views.Base.extend
 		
 		# Resize
 		@resize()
+		$(window).unbind().resize => @resize()
 
 		# Chain
 		@
