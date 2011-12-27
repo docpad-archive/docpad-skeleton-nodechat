@@ -82,6 +82,7 @@ These technologies work together really really well, as because a chat applicati
 - System commands. E.g. `/nick Your New Displayname`
 - When people mouse over a username, they should get all the user details
 - When people mouse over a relative time, they should get the absolute time
+- Preselected color combinations instead of randomly generated
 
 
 ## License

@@ -107,7 +107,7 @@ App.models.User = App.models.Base.extend
 		unless color
 			hue = randomFromTo(0,360)
 			saturation = randomFromTo(30,80)+'%'
-			lightness = '45%'
+			lightness = randomFromTo(40,47)+'%'
 			color = "hsl(#{hue}, #{saturation}, #{lightness})"
 			@set {color}
 		
