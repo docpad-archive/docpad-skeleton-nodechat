@@ -67,7 +67,6 @@ These technologies work together really really well, as because a chat applicati
 
 ## Todo / Known-issues
 
-- User list needs styling
 - Documentation
 - Gravatars not working (always the default gravatar image)
 - Old messages aren't being update with new user details

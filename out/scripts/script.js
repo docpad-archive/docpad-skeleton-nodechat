@@ -68,21 +68,21 @@
       avatar: null
     },
     initialize: function() {
-      var cid, username;
+      var cid, displayname;
       var _this = this;
       cid = this.cid;
-      username = this.get('username');
-      if (!username) {
-        username = 'unknown';
+      displayname = this.get('displayname');
+      if (!displayname) {
+        displayname = 'unknown';
         this.set({
-          username: username
+          displayname: displayname
         });
       }
       this.bind('change:id', function(model, id) {
-        username = _this.get('username');
-        if (username === 'unknown' || !username) {
+        displayname = _this.get('displayname');
+        if (displayname === 'unknown' || !displayname) {
           return _this.set({
-            username: "User " + id
+            displayname: "User " + id
           });
         }
       });
@@ -171,32 +171,34 @@
       return this._initialize();
     },
     populate: function() {
-      var $email, $fullname, $id, $username, email, fullname, id, username;
+      var $displayname, $email, $id, displayname, email, id;
       id = this.model.get('id');
-      username = this.model.get('username');
+      displayname = this.model.get('displayname');
       email = this.model.get('email');
-      fullname = this.model.get('fullname');
       $id = this.$('.id').val(id);
-      $username = this.$('.username').val(username);
-      $email = this.$('.email').val(email);
-      return $fullname = this.$('.fullname').val(fullname);
+      $displayname = this.$('.displayname').val(displayname);
+      return $email = this.$('.email').val(email);
     },
     render: function() {
-      var $cancelButton, $closeButton, $email, $fullname, $id, $submitButton, $username;
+      var $cancelButton, $closeButton, $displayname, $email, $id, $submitButton;
       var _this = this;
       this.populate();
       $id = this.$('.id');
-      $username = this.$('.username');
+      $displayname = this.$('.displayname');
       $email = this.$('.email');
-      $fullname = this.$('.fullname');
       $submitButton = this.$('.submitButton');
       $cancelButton = this.$('.cancelButton');
       $closeButton = this.$('.close');
+      $displayname.add($email).keypress(function(event) {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          return $submitButton.trigger('click');
+        }
+      });
       $submitButton.click(function() {
         _this.model.set({
-          username: $username.val(),
-          email: $email.val(),
-          fullname: $fullname.val()
+          displayname: $displayname.val(),
+          email: $email.val()
         });
         _this.hide();
         return _this.trigger('update', _this.model);
@@ -212,7 +214,10 @@
       return this;
     },
     show: function() {
+      var $displayname;
       this.el.show();
+      $displayname = this.$('.displayname');
+      $displayname.focus();
       return this;
     }
   });
@@ -236,7 +241,7 @@
       userKey = "user-" + userId;
       this.views[userKey] = new App.views.User({
         model: user,
-        container: $userList
+        container: $('<tr><td class="user wrapper"></tr>').appendTo($userList).find('.user.wrapper')
       }).render();
       return this;
     },
@@ -249,11 +254,11 @@
       return this;
     },
     populate: function() {
-      var $userLIst, users;
+      var $userList, users;
       var _this = this;
       this.views = {};
       users = this.model;
-      $userLIst = this.$('.userLIst').empty();
+      $userList = this.$('.userList').empty();
       users.each(function(user) {
         return _this.addUser(user);
       });
@@ -275,22 +280,20 @@
       return this._initialize();
     },
     populate: function() {
-      var $avatar, $email, $fullname, $id, $username, avatar, email, fullname, id, username;
+      var $avatar, $displayname, $email, $id, avatar, displayname, email, id;
       id = this.model.get('id');
-      username = this.model.get('username');
+      displayname = this.model.get('displayname');
       email = this.model.get('email');
-      fullname = this.model.get('fullname');
       avatar = this.model.get('avatar');
       $id = this.$('.id');
-      $username = this.$('.username');
       $email = this.$('.email');
-      $fullname = this.$('.fullname');
+      $displayname = this.$('.displayname');
       $avatar = this.$('.avatar');
-      $id.text(id || '').toggle(!!id);
-      $username.text(username || '').toggle(!!username);
-      $email.text(email || '').toggle(!!email);
-      $fullname.text(fullname || '').toggle(!!fullname);
-      $avatar.attr('src', avatar || '').toggle(!!avatar);
+      $id.text(id || '');
+      $displayname.text(displayname || '');
+      $email.text(email || '');
+      $avatar.empty();
+      if (avatar) $('<img class="avatarImage">').appendTo($avatar).attr('src');
       return this;
     },
     render: function() {
@@ -366,10 +369,62 @@
     }
   });
 
+  App.views.Notification = App.views.Base.extend({
+    initialize: function() {
+      this.el = $('#views > .notification.view').clone().data('view', this);
+      return this._initialize();
+    },
+    populate: function() {
+      var $content, $title, content, title;
+      title = this.options.title;
+      content = this.options.content;
+      $title = this.$('.title');
+      $content = this.$('.content');
+      $title.text(title || '').toggle(!!title);
+      $content.text(content || '').toggle(!!content);
+      return this;
+    },
+    render: function() {
+      var _this = this;
+      this.populate();
+      if (this._timeout) {
+        clearTimeout(this._timeout);
+        this._timeout = null;
+      }
+      this.el.stop(true, true).hide().fadeIn(200, function() {
+        return _this._timeout = setTimeout(function() {
+          return _this.el.fadeOut(200, function() {
+            if (!((_this.options.destroy != null) && _this.options.destroy === false)) {
+              return _this.remove();
+            }
+          });
+        }, 2000);
+      });
+      return this;
+    }
+  });
+
   App.views.App = App.views.Base.extend({
     initialize: function() {
       this.el = $('#views > .app.view').clone().data('view', this);
       return this._initialize();
+    },
+    resize: function() {
+      var $header, $messageForm, $messagesView, $messagesWrapper, $usersWrapper, $window;
+      var _this = this;
+      $window = $(window);
+      $header = this.$('.header.topbar');
+      $messagesWrapper = this.$('.messages.wrapper');
+      $messagesView = $messagesWrapper.find('.messages.view');
+      $usersWrapper = this.$('.users.wrapper');
+      $messageForm = this.$('.messageForm');
+      $usersWrapper.height($window.height());
+      $messagesWrapper.width($window.width() - $usersWrapper.outerWidth());
+      $messageForm.width($window.width() - $usersWrapper.outerWidth());
+      $messagesWrapper.height($window.height() - $messageForm.outerHeight() - $header.outerHeight());
+      return setTimeout(function() {
+        return $messagesWrapper.prop('scrollTop', $messagesView.outerHeight());
+      }, 100);
     },
     start: function($container) {
       var me, messages, socket, system, user, users;
@@ -377,8 +432,8 @@
       me = this;
       socket = this.options.socket;
       system = new App.models.User({
-        username: 'system',
-        email: 'b@lupton.cc'
+        displayname: 'system',
+        email: 'nodechat@bevry.me'
       });
       user = new App.models.User();
       users = new App.collections.Users();
@@ -390,10 +445,11 @@
       });
       messages.bind('add', function(message) {
         var messageAuthor;
+        _this.resize();
         messageAuthor = message.get('author');
         if (messageAuthor.get('id') === user.get('id')) return;
         return showNotification({
-          title: messageAuthor.get('username') + ' says:',
+          title: messageAuthor.get('displayname') + ' says:',
           avatar: messageAuthor.get('avatar'),
           content: message.get('content')
         });
@@ -405,15 +461,15 @@
             id: userId
           });
           return socket.emit('handshake2', user, function(err, _users) {
-            var username;
+            var displayname;
             var _this = this;
             if (err) throw err;
-            username = user.get('username');
+            displayname = user.get('displayname');
             user.save();
             users.add(user);
             messages.add(new App.models.Message({
               author: system,
-              content: "Welcome " + username
+              content: "Welcome " + displayname
             }));
             _.each(_users, function(_user) {
               return me.user('add', _user);
@@ -477,7 +533,7 @@
       return this;
     },
     render: function() {
-      var $editUserButton, $messageInput, $messages, $userForm, $users, messages, user, users;
+      var $editUserButton, $messageInput, $messages, $notificationList, $userForm, $users, messages, user, users;
       var _this = this;
       user = this.model.get('user');
       users = this.model.get('users');
@@ -487,6 +543,7 @@
       $userForm = this.$('.userForm.wrapper');
       $users = this.$('.users.wrapper');
       $messageInput = this.$('.messageInput');
+      $notificationList = this.$('.notificationList');
       this.views = {};
       this.views.messages = new App.views.Messages({
         model: messages,
@@ -499,11 +556,16 @@
       this.views.userForm = new App.views.UserForm({
         model: user,
         container: $userForm
-      }).render().hide();
+      }).render().hide().bind('update', function(user) {
+        var notification;
+        user.save();
+        return notification = new App.views.Notification({
+          title: 'Changes saved successfully',
+          container: $notificationList
+        }).render();
+      });
       $editUserButton.click(function() {
-        return _this.views.userForm.show().bind('update', function(user) {
-          return user.save();
-        });
+        return _this.views.userForm.show();
       });
       $messageInput.bind('keypress', function(event) {
         var messageContent;
@@ -517,6 +579,8 @@
           });
         }
       });
+      $messageInput.focus();
+      this.resize();
       return this;
     }
   });

@@ -16,7 +16,7 @@ expiresOffset = oneDay
 # DocPad Creation
 
 # Configuration
-docpadPort = process.env.DOCPADPORT || process.env.PORT || 10113
+docpadPort = process.argv[2]  or  process.env.DOCPADPORT  or  process.env.PORT  or  10113
 
 # Create Servers
 docpadServer = express.createServer()

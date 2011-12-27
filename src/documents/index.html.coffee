@@ -16,7 +16,7 @@ div "#views", ->
 	div ".app.view", ->
 		header ".header.topbar", ->
 			div ".fill", ->
-				div ".container", ->
+				div ".container-fluid", ->
 					h3 -> a -> "Node Chat"
 					ul ".nav", ->
 					ul ".nav.secondary-nav", ->
@@ -24,11 +24,21 @@ div "#views", ->
 							span ".editUserButton.btn.primary", -> "Edit User"
 		div ".body", ->
 			div ".messages.wrapper", ->
-			textarea ".messageInput", placeholder: "Your message..."
 			div ".users.wrapper", ->
+			div ".messageForm", ->
+				textarea ".messageInput", placeholder: "Your message..."
+		div ".notificationList", ->
 		div ".userForm.wrapper", ->
-
-
+	
+	# Notification
+	div '.notification.view', ->
+		div '.popover-wrapper', ->
+			div '.popover.below', ->
+				div '.arrow', ->
+				div '.inner', ->
+					h3 '.title', ->
+					div '.content', ->
+		
 	
 	# ---------------------------------
 	# Users
@@ -39,9 +49,8 @@ div "#views", ->
 			a ".close", -> 'x'
 			h3 "Edit Details"
 		div ".body.modal-body", ->
-			input ".input.username.required", type: 'text', placeholder: 'Username'
+			input ".input.displayname.optional", type: 'text', placeholder: 'Display name'
 			input ".input.email.optional", type: 'text', placeholder: 'Email'
-			input ".input.fullname.optional", type: 'text', placeholder: 'Real name'
 		footer ".footer.modal-footer", ->
 			button ".cancelButton.btn.secondary", -> "Cancel"
 			button ".submitButton.btn.primary", -> "Update Details"
@@ -49,14 +58,18 @@ div "#views", ->
 	# User
 	div ".user.view", ->
 		span ".id", ->
-		span ".username", ->
+		span ".displayname", ->
 		span ".email", ->
-		span ".fullname", ->
-		img ".avatar", ->
+		span ".avatar", ->
+			img ".avatarImage", ->
 
 	# Users
 	div ".users.view", ->
-		div ".userList", ->
+		table ".bordered-table.zebra-striped", ->
+			thead ->
+				tr ->
+					th -> 'Users'
+			tbody ".userList", ->
 
 
 	# ---------------------------------
@@ -71,6 +84,8 @@ div "#views", ->
 
 	# Messages
 	div ".messages.view", ->
+		div ".page-header", ->
+			h1 -> 'Messages'
 		table ".bordered-table.zebra-striped", ->
 			thead ->
 				tr ->

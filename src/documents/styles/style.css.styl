@@ -1,5 +1,9 @@
 // Reset
+@import 'nib'
 @import 'bootstrap.css'
+
+*
+	box-sizing: border-box
 
 #views
 	display: none
@@ -11,13 +15,20 @@
 		height: 2em
 
 .messages.view
-	td.posted
+	th.author,
+	td.author
+		width: 150px
+		overflow: hidden
+		.user.view
+			width: 150px
+			overflow: ellipsis
+	td.content,
+	th.content
+		text-align: left
+	td.posted,
 	th.posted
 		width: 15%
 		text-align: right
-	th.author,
-	td.author
-		width: 10%
 	
 	tbody
 		td.author.wrapper
@@ -31,13 +42,69 @@
 			.email
 				display: none !important
 
+.notificationList
+	position: fixed
+	top: 60px
+	right: 0
+	width: 50%
+
+	.popover-wrapper
+		width: 99%
+		min-height: 60px
+		position: relative
+
+		.popover
+			top: initial
+			left: initial
+			bottom: 1em
+			right: 0
+			display: block
+
+
 .app.view
 	> .header
 		.editUserButton
 			margin-top: 5px
+		.container, .container-fluid
+			width: 99%
 	> .body
-		padding-top: 40px
-		.messageInput
-			width: 96%
-			margin: 0 2% 0 1.5%
+		width: 100%
+		position: absolute
+		left: 0
+		top: 40px
+		padding: 0
+		.messages.wrapper
+			width: 80%
+			padding: 0 1em
+			margin: 1em 0
+			overflow: scroll
+			.page-header
+				display: none
+		.users.wrapper
+			width: 190px
+			position: fixed
+			top: 40px
+			right: 1em
+			padding: 0 1em
+			margin: 1em 0
+			overflow: scroll
+			.userList
+				.user.wrapper
+					width: 150px
+					overflow: hidden
+					.user.view
+						width: 150px
+						overflow: ellipsis
+						.id, .email
+							display: none !important
+						.displayname
+							overflow: ellipsis
+		.messageForm
+			position: fixed
+			bottom: 0
+			left 0
+			width: 80%
+			padding: 1em
 			min-height: 3em
+			.messageInput
+				width: 100%

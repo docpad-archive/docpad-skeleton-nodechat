@@ -87,16 +87,16 @@ App.models.User = App.models.Base.extend
 	initialize: ->
 		# Fetch values
 		cid = @cid
-		username = @get('username')
+		displayname = @get('displayname')
 
-		# Ensure username
-		unless username
-			username = 'unknown'
-			@set {username}
+		# Ensure displayname
+		unless displayname
+			displayname = 'unknown'
+			@set {displayname}
 		@bind 'change:id', (model,id) =>
-			username = @get('username')
-			if username is 'unknown' or !username
-				@set username: "User #{id}"
+			displayname = @get('displayname')
+			if displayname is 'unknown' or !displayname
+				@set displayname: "User #{id}"
 		
 		# Ensure Gravatar
 		@bind 'change:email', (model,email) =>
@@ -203,15 +203,13 @@ App.views.UserForm = App.views.Base.extend
 	populate: ->
 		# Fetch
 		id = @model.get('id')
-		username = @model.get('username')
+		displayname = @model.get('displayname')
 		email = @model.get('email')
-		fullname = @model.get('fullname')
 
 		# Populate
 		$id = @$('.id').val(id)
-		$username = @$('.username').val(username)
+		$displayname = @$('.displayname').val(displayname)
 		$email = @$('.email').val(email)
-		$fullname = @$('.fullname').val(fullname)
 
 	render: ->
 		# Populate
@@ -219,19 +217,21 @@ App.views.UserForm = App.views.Base.extend
 
 		# Elements
 		$id = @$('.id')
-		$username = @$('.username')
+		$displayname = @$('.displayname')
 		$email = @$('.email')
-		$fullname = @$('.fullname')
 		$submitButton = @$('.submitButton')
 		$cancelButton = @$('.cancelButton')
 		$closeButton = @$('.close')
 
 		# Events
+		$displayname.add($email).keypress (event) =>
+			if event.keyCode is 13 #enter
+				event.preventDefault()
+				$submitButton.trigger('click')
 		$submitButton.click =>
 			@model.set
-				username: $username.val()
+				displayname: $displayname.val()
 				email: $email.val()
-				fullname: $fullname.val()
 			@hide()
 			@trigger 'update', @model
 		$cancelButton.add($closeButton).click =>
@@ -247,6 +247,8 @@ App.views.UserForm = App.views.Base.extend
 	
 	show: ->
 		@el.show()
+		$displayname = @$('.displayname')
+		$displayname.focus()
 		@
 
 
@@ -276,7 +278,7 @@ App.views.Users = App.views.Base.extend
 		userKey = "user-#{userId}"
 		@views[userKey] = new App.views.User(
 			model: user
-			container: $userList
+			container: $('<tr><td class="user wrapper"></tr>').appendTo($userList).find('.user.wrapper')
 		).render()
 
 		# Chain
@@ -298,7 +300,7 @@ App.views.Users = App.views.Base.extend
 		# Prepare
 		@views = {}
 		users = @model
-		$userLIst = @$('.userLIst').empty()
+		$userList = @$('.userList').empty()
 
 		# Messages
 		users.each (user) =>
@@ -332,24 +334,23 @@ App.views.User = App.views.Base.extend
 	populate: ->
 		# Fetch
 		id = @model.get('id')
-		username = @model.get('username')
+		displayname = @model.get('displayname')
 		email = @model.get('email')
-		fullname = @model.get('fullname')
 		avatar = @model.get('avatar')
 
 		# Elements
 		$id = @$('.id')
-		$username = @$('.username')
 		$email = @$('.email')
-		$fullname = @$('.fullname')
+		$displayname = @$('.displayname')
 		$avatar = @$('.avatar')
 
 		# Populate
-		$id.text(id or '').toggle(!!id)
-		$username.text(username or '').toggle(!!username)
-		$email.text(email or '').toggle(!!email)
-		$fullname.text(fullname or '').toggle(!!fullname)
-		$avatar.attr('src',avatar or '').toggle(!!avatar)
+		$id.text(id or '')
+		$displayname.text(displayname or '')
+		$email.text(email or '')
+		$avatar.empty()
+		if avatar
+			$('<img class="avatarImage">').appendTo($avatar).attr('src')
 		
 		# Chain
 		@
@@ -458,6 +459,52 @@ App.views.Message = App.views.Base.extend
 
 
 # -------------------------------------
+# Notification
+
+App.views.Notification = App.views.Base.extend
+	initialize: ->
+		# Fetch
+		@el = $('#views > .notification.view').clone().data('view',@)
+		
+		# Super
+		@_initialize()
+	
+	populate: ->
+		# Fetch
+		title = @options.title
+		content = @options.content
+
+		# Elements
+		$title = @$('.title')
+		$content = @$('.content')
+
+		# Populate
+		$title.text(title or '').toggle(!!title)
+		$content.text(content or '').toggle(!!content)
+
+		# Chain
+		@
+
+	render: ->
+		# Prepare
+		@populate()
+
+		# Display
+		if @_timeout
+			clearTimeout(@_timeout)
+			@_timeout = null
+		@el.stop(true,true).hide().fadeIn 200, =>
+			@_timeout = setTimeout(=>
+				@el.fadeOut 200, =>
+					unless @options.destroy? and @options.destroy is false
+						@remove()
+			,2000)
+
+		# Chain
+		@
+
+
+# -------------------------------------
 # App
 
 App.views.App = App.views.Base.extend
@@ -468,6 +515,23 @@ App.views.App = App.views.Base.extend
 		# Super
 		@_initialize()
 	
+	resize: ->
+		$window = $(window)
+		$header = @$('.header.topbar')
+		$messagesWrapper = @$('.messages.wrapper')
+		$messagesView = $messagesWrapper.find('.messages.view')
+		$usersWrapper = @$('.users.wrapper')
+		$messageForm = @$('.messageForm')
+
+		$usersWrapper.height  $window.height()
+		$messagesWrapper.width  $window.width() - $usersWrapper.outerWidth()
+		$messageForm.width  $window.width() - $usersWrapper.outerWidth()
+		$messagesWrapper.height  $window.height() - $messageForm.outerHeight() - $header.outerHeight()
+
+		setTimeout(=>
+			$messagesWrapper.prop 'scrollTop', $messagesView.outerHeight()
+		,100)
+	
 	start: ($container) ->
 		# Prepare
 		me = @
@@ -475,8 +539,8 @@ App.views.App = App.views.Base.extend
 
 		# Models
 		system = new App.models.User(
-			username: 'system'
-			email: 'b@lupton.cc'
+			displayname: 'system'
+			email: 'nodechat@bevry.me'
 		)
 		user = new App.models.User()
 		users = new App.collections.Users()
@@ -485,10 +549,14 @@ App.views.App = App.views.Base.extend
 		
 		# Events
 		messages.bind 'add', (message) =>
+			# Scroll
+			@resize()
+
+			# Notify
 			messageAuthor = message.get('author')
 			return  if messageAuthor.get('id') is user.get('id')
 			showNotification(
-				title: messageAuthor.get('username')+' says:'
+				title: messageAuthor.get('displayname')+' says:'
 				avatar: messageAuthor.get('avatar')
 				content: message.get('content')
 			)
@@ -500,12 +568,12 @@ App.views.App = App.views.Base.extend
 				user.set id: userId
 				socket.emit 'handshake2', user, (err,_users) ->
 					throw err  if err
-					username = user.get('username')
+					displayname = user.get('displayname')
 					user.save()
 					users.add(user)
 					messages.add new App.models.Message(
 						author: system
-						content: "Welcome #{username}"
+						content: "Welcome #{displayname}"
 					)
 					_.each _users, (_user) ->
 						me.user 'add', _user
@@ -564,6 +632,7 @@ App.views.App = App.views.Base.extend
 		$userForm = @$('.userForm.wrapper')
 		$users = @$('.users.wrapper')
 		$messageInput = @$('.messageInput')
+		$notificationList = @$('.notificationList')
 
 
 		# -----------------------------
@@ -588,7 +657,12 @@ App.views.App = App.views.Base.extend
 		@views.userForm = new App.views.UserForm(
 			model: user
 			container: $userForm
-		).render().hide()
+		).render().hide().bind 'update', (user) ->
+			user.save()
+			notification = new App.views.Notification(
+				title: 'Changes saved successfully'
+				container: $notificationList
+			).render()
 
 
 		# -----------------------------
@@ -596,9 +670,8 @@ App.views.App = App.views.Base.extend
 	
 		# Edit User
 		$editUserButton.click =>
-			@views.userForm.show().bind 'update', (user) ->
-				user.save()
-	
+			@views.userForm.show()
+		
 		# Send Message
 		$messageInput.bind 'keypress', (event) =>
 			if event.keyCode is 13 # enter
@@ -610,6 +683,12 @@ App.views.App = App.views.Base.extend
 					content: messageContent
 				)
 		
+		# Focus
+		$messageInput.focus()
+		
+		# Resize
+		@resize()
+
 		# Chain
 		@
 

@@ -1,11 +1,26 @@
 @import 'bootstrap.css';
+*{-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}
 #views{display:none}
 .userForm.view .input{width:98%;margin-bottom:1em;height:2em}
+.messages.view th.author,.messages.view td.author{width:150px;overflow:hidden;}
+.messages.view th.author .user.view,.messages.view td.author .user.view{width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.messages.view td.content,.messages.view th.content{text-align:left}
 .messages.view td.posted,.messages.view th.posted{width:15%;text-align:right}
-.messages.view th.author,.messages.view td.author{width:10%}
 .messages.view tbody td.author.wrapper .avatar{width:16px;height:16px;float:left;margin-right:4px}
 .messages.view tbody td.author.wrapper .id{display:none !important}
 .messages.view tbody td.author.wrapper .email{display:none !important}
+.notificationList{position:fixed;top:60px;right:0;width:50%;}
+.notificationList .popover-wrapper{width:99%;min-height:60px;position:relative;}
+.notificationList .popover-wrapper .popover{top:initial;left:initial;bottom:1em;right:0;display:block}
 .app.view > .header .editUserButton{margin-top:5px}
-.app.view > .body{padding-top:40px;}
-.app.view > .body .messageInput{width:96%;margin:0 2% 0 1.5%;min-height:3em}
+.app.view > .header .container,.app.view > .header .container-fluid{width:99%}
+.app.view > .body{width:100%;position:absolute;left:0;top:40px;padding:0;}
+.app.view > .body .messages.wrapper{width:80%;padding:0 1em;margin:1em 0;overflow:scroll;}
+.app.view > .body .messages.wrapper .page-header{display:none}
+.app.view > .body .users.wrapper{width:190px;position:fixed;top:40px;right:1em;padding:0 1em;margin:1em 0;overflow:scroll;}
+.app.view > .body .users.wrapper .userList .user.wrapper{width:150px;overflow:hidden;}
+.app.view > .body .users.wrapper .userList .user.wrapper .user.view{width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app.view > .body .users.wrapper .userList .user.wrapper .user.view .id,.app.view > .body .users.wrapper .userList .user.wrapper .user.view .email{display:none !important}
+.app.view > .body .users.wrapper .userList .user.wrapper .user.view .displayname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app.view > .body .messageForm{position:fixed;bottom:0;left:0;width:80%;padding:1em;min-height:3em;}
+.app.view > .body .messageForm .messageInput{width:100%}
