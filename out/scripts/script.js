@@ -23,7 +23,7 @@
     return Math.floor(Math.random() * (to - from + 1) + from);
   };
 
-  if (webkitNotifications && webkitNotifications.checkPermission()) {
+  if (webkitNotifications && webkitNotifications.checkPermission() !== 0) {
     $(document.body).click(function() {
       webkitNotifications.requestPermission();
       return $(document.body).unbind();
@@ -33,7 +33,8 @@
   showNotification = function(_arg) {
     var avatar, content, notification, timer, title;
     title = _arg.title, content = _arg.content, avatar = _arg.avatar;
-    if (webkitNotifications && webkitNotifications.checkPermission() === false) {
+    debugger;
+    if (webkitNotifications && webkitNotifications.checkPermission() === 0) {
       avatar || (avatar = "");
       title || (title = "New message");
       content || (content = "");

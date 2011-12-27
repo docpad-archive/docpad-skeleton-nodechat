@@ -28,7 +28,7 @@ randomFromTo = (from, to) ->
 
 # Ensure Permissions
 # If we don't have permissions, we will have to request them
-if webkitNotifications and webkitNotifications.checkPermission()
+if webkitNotifications and webkitNotifications.checkPermission() isnt 0
 	# Permissions can only be enabled from a user event
 	# So do a dodgy hack to ensure they will be enabled
 	# (when a user clicks anywhere of the page, we request the permissions)
@@ -39,7 +39,7 @@ if webkitNotifications and webkitNotifications.checkPermission()
 # Setup helper
 # Provide a simpler API for our notifications
 showNotification = ({title,content,avatar}) ->
-	if webkitNotifications and webkitNotifications.checkPermission() is false
+	if webkitNotifications and webkitNotifications.checkPermission() is 0
 		# Ensure
 		avatar or= ""
 		title or= "New message"
