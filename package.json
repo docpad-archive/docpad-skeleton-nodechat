@@ -1,6 +1,6 @@
 {
 	"name": "nodechat.docpad",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Node Chat (built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap)",
 	"homepage": "https://github.com/balupton/canvas.docpad",
 	"keywords": [

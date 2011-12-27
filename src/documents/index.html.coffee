@@ -19,6 +19,8 @@ div "#views", ->
 				div ".container-fluid", ->
 					h3 -> a -> "Node Chat"
 					ul ".nav", ->
+						li ".about", ->
+							a -> 'About'
 					ul ".nav.secondary-nav", ->
 						li ".userStatus", ->
 							span ".editUserButton.btn.primary", -> "Edit User"

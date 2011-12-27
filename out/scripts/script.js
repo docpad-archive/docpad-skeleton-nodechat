@@ -1,5 +1,5 @@
 (function() {
-  var $, App, Backbone, MD5, app, jQuery, showNotification, socket, webkitNotifications, _;
+  var $, App, Backbone, MD5, app, jQuery, randomFromTo, showNotification, socket, webkitNotifications, _;
 
   webkitNotifications = window.webkitNotifications;
 
@@ -17,6 +17,10 @@
     views: {},
     models: {},
     collections: {}
+  };
+
+  randomFromTo = function(from, to) {
+    return Math.floor(Math.random() * (to - from + 1) + from);
   };
 
   if (webkitNotifications.checkPermission()) {
@@ -68,9 +72,10 @@
       avatar: null
     },
     initialize: function() {
-      var cid, displayname;
+      var cid, color, displayname, hue;
       var _this = this;
       cid = this.cid;
+      color = this.get('color');
       displayname = this.get('displayname');
       if (!displayname) {
         displayname = 'unknown';
@@ -86,12 +91,19 @@
           });
         }
       });
+      if (!color) {
+        hue = randomFromTo(0, 360);
+        color = "hsl(" + hue + ", 75%, 40%)";
+        this.set({
+          color: color
+        });
+      }
       this.bind('change:email', function(model, email) {
         var avatarHash, avatarSize, avatarUrl;
         if (email) {
-          avatarSize = 80;
+          avatarSize = 32;
           avatarHash = MD5(email);
-          avatarUrl = "http://www.gravatar.com/avatar/" + avatarSize + ".jpg?s=" + avatarSize;
+          avatarUrl = "http://www.gravatar.com/avatar/" + avatarHash + ".jpg?s=" + avatarSize;
         } else {
           avatarUrl = null;
         }
@@ -108,7 +120,8 @@
     defaults: {
       posted: null,
       content: null,
-      author: null
+      author: null,
+      color: null
     },
     initialize: function() {
       var posted;
@@ -250,6 +263,7 @@
       $userList = this.$('.userList');
       userId = user.get('id');
       userKey = "user-" + userId;
+      this.views[userKey].el.parent().parent().remove();
       this.views[userKey].remove();
       return this;
     },
@@ -280,11 +294,12 @@
       return this._initialize();
     },
     populate: function() {
-      var $avatar, $displayname, $email, $id, avatar, displayname, email, id;
+      var $avatar, $displayname, $email, $id, avatar, color, displayname, email, id;
       id = this.model.get('id');
       displayname = this.model.get('displayname');
       email = this.model.get('email');
       avatar = this.model.get('avatar');
+      color = this.model.get('color');
       $id = this.$('.id');
       $email = this.$('.email');
       $displayname = this.$('.displayname');
@@ -293,7 +308,10 @@
       $displayname.text(displayname || '');
       $email.text(email || '');
       $avatar.empty();
-      if (avatar) $('<img class="avatarImage">').appendTo($avatar).attr('src');
+      if (avatar) {
+        $('<img>').appendTo($avatar).attr('src', avatar).addClass('avatarImage');
+      }
+      this.el.css('color', color);
       return this;
     },
     render: function() {
@@ -355,7 +373,11 @@
       author = this.model.get('author');
       content = this.model.get('content');
       $id.text(id);
-      $content.text(content);
+      if (author.get('id') === 'system') {
+        $content.html(content);
+      } else {
+        $content.text(content);
+      }
       $time = $("<time>").attr('datetime', posted.toUTCString()).appendTo($posted.empty()).timeago(posted);
       this.views.author = new App.views.User({
         model: author,
@@ -431,28 +453,33 @@
       var _this = this;
       me = this;
       socket = this.options.socket;
-      system = new App.models.User({
-        displayname: 'system',
-        email: 'nodechat@bevry.me'
-      });
-      user = new App.models.User();
       users = new App.collections.Users();
       messages = new App.collections.Messages();
       this.model.set({
-        user: user,
         users: users,
         messages: messages
       });
+      system = this.user('create', {
+        id: 'system',
+        displayname: 'system',
+        color: '#DAA520'
+      });
+      user = this.user('create', {});
+      this.model.set({
+        system: system,
+        user: user
+      });
       messages.bind('add', function(message) {
-        var messageAuthor;
+        var messageAuthor, _ref;
         _this.resize();
         messageAuthor = message.get('author');
-        if (messageAuthor.get('id') === user.get('id')) return;
-        return showNotification({
-          title: messageAuthor.get('displayname') + ' says:',
-          avatar: messageAuthor.get('avatar'),
-          content: message.get('content')
-        });
+        if ((_ref = messageAuthor.get('id')) !== 'system' && _ref !== user.get('id')) {
+          return showNotification({
+            title: messageAuthor.get('displayname') + ' says:',
+            avatar: messageAuthor.get('avatar'),
+            content: message.get('content')
+          });
+        }
       });
       socket.on('connect', function() {
         return socket.emit('handshake1', function(err, userId) {
@@ -461,21 +488,16 @@
             id: userId
           });
           return socket.emit('handshake2', user, function(err, _users) {
-            var displayname;
-            var _this = this;
             if (err) throw err;
-            displayname = user.get('displayname');
             user.save();
-            users.add(user);
-            messages.add(new App.models.Message({
-              author: system,
-              content: "Welcome " + displayname
-            }));
+            _this.systemMessage('welcome', {
+              user: user
+            });
             _.each(_users, function(_user) {
-              return me.user('add', _user);
+              return _this.user('add', _user);
             });
             return $(function() {
-              return me.render();
+              return _this.render();
             });
           });
         });
@@ -488,40 +510,114 @@
       });
       return this;
     },
+    systemMessage: function(code, data) {
+      var ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref2;
+      switch (code) {
+        case 'welcome':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user');
+          this.message('create', {
+            author: this.model.get('system'),
+            content: "Welcome <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
+          });
+          break;
+        case 'disconnected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user') || {};
+          if ((_ref = user.id) !== 'system' && _ref !== ourUser.id) {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has disconnected"
+            });
+          }
+          break;
+        case 'nameChange':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayNameOld = data.userDisplayNameOld;
+          userDisplayNameNew = data.userDisplayNameNew;
+          if (userDisplayNameOld !== 'unknown') {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayNameOld + "</span> has changed their name to <span style='color:" + userColor + "'>" + userDisplayNameNew + "</span>"
+            });
+          }
+          break;
+        case 'connected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user') || {};
+          if ((_ref2 = user.id) !== 'system' && _ref2 !== ourUser.id) {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has joined"
+            });
+          }
+      }
+      return this;
+    },
     user: function(method, data) {
-      var user, users;
+      var me, user, users;
+      me = this;
+      data || (data = {});
       users = this.model.get('users');
+      user = users.get(data.id);
       switch (method) {
         case 'delete':
         case 'remove':
-          users.remove(data.id);
+          if (user) {
+            this.systemMessage('disconnected', {
+              user: user
+            });
+            users.remove(user.id);
+            user = null;
+          }
           break;
         case 'create':
         case 'update':
         case 'add':
-          user = users.get(data.id);
           if (user) {
             user.set(data);
           } else {
             user = new App.models.User();
             user.set(data);
+            user.bind('change:displayname', function(model, userDisplayNameNew) {
+              var userDisplayNameOld;
+              userDisplayNameOld = user.previous('displayname');
+              return me.systemMessage('nameChange', {
+                user: user,
+                userDisplayNameOld: userDisplayNameOld,
+                userDisplayNameNew: userDisplayNameNew
+              });
+            });
             users.add(user);
+            this.systemMessage('connected', {
+              user: user
+            });
           }
       }
-      return this;
+      return user;
     },
     message: function(method, data) {
       var message, messages;
       messages = this.model.get('messages');
+      message = messages.get(data.id);
       switch (method) {
         case 'delete':
         case 'remove':
-          messages.remove(data.id);
+          if (message) {
+            messages.remove(data.id);
+            message = null;
+          }
           break;
         case 'create':
         case 'update':
         case 'add':
-          message = messages.get(data.id);
           if (message) {
             message.set(data);
           } else {
@@ -530,7 +626,7 @@
             messages.add(message);
           }
       }
-      return this;
+      return message;
     },
     render: function() {
       var $editUserButton, $messageInput, $messages, $notificationList, $userForm, $users, messages, user, users;
@@ -573,7 +669,7 @@
           event.preventDefault();
           messageContent = $messageInput.val();
           $messageInput.val('');
-          return messages.create({
+          return _this.message('create', {
             author: user,
             content: messageContent
           });

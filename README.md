@@ -68,10 +68,7 @@ These technologies work together really really well, as because a chat applicati
 ## Todo / Known-issues
 
 - Documentation
-- Gravatars not working (always the default gravatar image)
-- Old messages aren't being update with new user details
-- Add change of name system messages
-- Add disconnect and join system messages
+- Add the about page
 
 
 

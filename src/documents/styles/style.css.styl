@@ -5,6 +5,9 @@
 *
 	box-sizing: border-box
 
+a
+	cursor: pointer
+
 #views
 	display: none
 
@@ -13,6 +16,16 @@
 		width: 98%
 		margin-bottom: 1em
 		height: 2em
+
+.user.view
+	position: relative
+	.avatar
+		position: absolute
+		top: 0
+		right: 0
+		.avatarImage
+			height: 16px
+			border-radius: 3px
 
 .messages.view
 	th.author,
@@ -31,15 +44,10 @@
 		text-align: right
 	
 	tbody
+		tr.system
+			color: yellow
 		td.author.wrapper
-			.avatar
-				width: 16px
-				height: 16px
-				float: left
-				margin-right: 4px
-			.id
-				display: none !important
-			.email
+			.id, .email
 				display: none !important
 
 .notificationList

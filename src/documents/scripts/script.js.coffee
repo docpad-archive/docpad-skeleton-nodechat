@@ -15,6 +15,10 @@ App =
 	models: {}
 	collections: {}
 
+# Globals
+randomFromTo = (from, to) ->
+	Math.floor Math.random() * (to - from + 1) + from
+
 
 # =====================================
 # Notifications
@@ -87,6 +91,7 @@ App.models.User = App.models.Base.extend
 	initialize: ->
 		# Fetch values
 		cid = @cid
+		color = @get('color')
 		displayname = @get('displayname')
 
 		# Ensure displayname
@@ -98,12 +103,18 @@ App.models.User = App.models.Base.extend
 			if displayname is 'unknown' or !displayname
 				@set displayname: "User #{id}"
 		
+		# Ensure color
+		unless color
+			hue = randomFromTo(0,360)
+			color = "hsl(#{hue}, 75%, 40%)"
+			@set {color}
+		
 		# Ensure Gravatar
 		@bind 'change:email', (model,email) =>
 			if email
-				avatarSize = 80
+				avatarSize = 32
 				avatarHash = MD5(email)
-				avatarUrl = "http://www.gravatar.com/avatar/#{avatarSize}.jpg?s=#{avatarSize}"
+				avatarUrl = "http://www.gravatar.com/avatar/#{avatarHash}.jpg?s=#{avatarSize}"
 			else
 				avatarUrl = null
 			@set avatar: avatarUrl
@@ -122,6 +133,7 @@ App.models.Message = App.models.Base.extend
 		posted: null # datetime
 		content: null # string
 		author: null # user
+		color: null # string
 	
 	initialize: ->
 		# Fetch values
@@ -291,6 +303,7 @@ App.views.Users = App.views.Base.extend
 		# User
 		userId = user.get('id')
 		userKey = "user-#{userId}"
+		@views[userKey].el.parent().parent().remove()
 		@views[userKey].remove()
 
 		# Chain
@@ -337,6 +350,7 @@ App.views.User = App.views.Base.extend
 		displayname = @model.get('displayname')
 		email = @model.get('email')
 		avatar = @model.get('avatar')
+		color = @model.get('color')
 
 		# Elements
 		$id = @$('.id')
@@ -350,8 +364,9 @@ App.views.User = App.views.Base.extend
 		$email.text(email or '')
 		$avatar.empty()
 		if avatar
-			$('<img class="avatarImage">').appendTo($avatar).attr('src')
-		
+			$('<img>').appendTo($avatar).attr('src',avatar).addClass('avatarImage')
+		@el.css('color',color)
+
 		# Chain
 		@
 	
@@ -438,7 +453,10 @@ App.views.Message = App.views.Base.extend
 
 		# Put Values
 		$id.text(id)
-		$content.text(content)
+		if author.get('id') is 'system'
+			$content.html(content)
+		else
+			$content.text(content)
 		$time = $("<time>").attr('datetime',posted.toUTCString()).appendTo($posted.empty()).timeago(posted)
 
 		# Author
@@ -537,15 +555,19 @@ App.views.App = App.views.Base.extend
 		me = @
 		socket = @options.socket
 
-		# Models
-		system = new App.models.User(
-			displayname: 'system'
-			email: 'nodechat@bevry.me'
-		)
-		user = new App.models.User()
+		# Collections
 		users = new App.collections.Users()
 		messages = new App.collections.Messages()
-		@model.set {user,users,messages}
+		@model.set {users,messages}
+
+		# Models
+		system = @user 'create', {
+			id: 'system'
+			displayname: 'system'
+			color: '#DAA520'
+		}
+		user = @user 'create', {}
+		@model.set {system,user}
 		
 		# Events
 		messages.bind 'add', (message) =>
@@ -554,30 +576,35 @@ App.views.App = App.views.Base.extend
 
 			# Notify
 			messageAuthor = message.get('author')
-			return  if messageAuthor.get('id') is user.get('id')
-			showNotification(
-				title: messageAuthor.get('displayname')+' says:'
-				avatar: messageAuthor.get('avatar')
-				content: message.get('content')
-			)
+			unless messageAuthor.get('id') in ['system',user.get('id')]
+				showNotification(
+					title: messageAuthor.get('displayname')+' says:'
+					avatar: messageAuthor.get('avatar')
+					content: message.get('content')
+				)
 
 		# Handshake
 		socket.on 'connect', =>
-			socket.emit 'handshake1', (err,userId) ->
+			socket.emit 'handshake1', (err,userId) =>
 				throw err  if err
 				user.set id: userId
-				socket.emit 'handshake2', user, (err,_users) ->
+				socket.emit 'handshake2', user, (err,_users) =>
 					throw err  if err
-					displayname = user.get('displayname')
+
+					# Save us
 					user.save()
-					users.add(user)
-					messages.add new App.models.Message(
-						author: system
-						content: "Welcome #{displayname}"
-					)
-					_.each _users, (_user) ->
-						me.user 'add', _user
-					$ => me.render()
+
+					# Message
+					@systemMessage 'welcome', {
+						user: user
+					}
+
+					# Add other users
+					_.each _users, (_user) =>
+						@user 'add', _user
+					
+					# Render
+					$ => @render()
 
 		# User
 		socket.on 'user', (method,data) =>
@@ -590,35 +617,119 @@ App.views.App = App.views.Base.extend
 		# Chain
 		@
 	
-	user: (method,data) ->
-		users = @model.get('users')
-		switch method
-			when 'delete','remove'
-				users.remove(data.id)
-			when 'create','update','add'
-				user = users.get(data.id)
-				if user
-					user.set(data)
-				else
-					user = new App.models.User()
-					user.set data
-					users.add(user)
+	systemMessage: (code,data) ->
+		# Create
+		switch code
+			when 'welcome'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user')
+				@message 'create', {
+					author: @model.get('system')
+					content: "Welcome <span style='color:#{userColor}'>#{userDisplayName}</span>"
+				}
+			
+			when 'disconnected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user') or {}
+				unless user.id in ['system',ourUser.id]
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has disconnected"
+					}
+			
+			when 'nameChange'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayNameOld = data.userDisplayNameOld
+				userDisplayNameNew = data.userDisplayNameNew
+				unless userDisplayNameOld is 'unknown'
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayNameOld}</span> has changed their name to <span style='color:#{userColor}'>#{userDisplayNameNew}</span>"
+					}
+			
+			when 'connected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user') or {}
+				unless user.id in ['system',ourUser.id]
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has joined"
+					}
+		
+		# Chain
 		@
 	
+	user: (method,data) ->
+		me = @
+		data or= {}
+		users = @model.get('users')
+		user = users.get(data.id)
+		switch method
+			# Delete
+			when 'delete','remove'
+				if user
+					# Message
+					@systemMessage 'disconnected', {
+						user: user
+					}
+
+					# Remove
+					users.remove(user.id)
+					user = null
+			
+			# Create, Update
+			when 'create','update','add'
+				if user
+					# Apply
+					user.set(data)
+					# Message is handled behind the scenes
+				else
+					# Create
+					user = new App.models.User()
+					user.set data
+					user.bind 'change:displayname', (model,userDisplayNameNew) ->
+						userDisplayNameOld = user.previous('displayname')
+						me.systemMessage 'nameChange', {
+							user: user
+							userDisplayNameOld: userDisplayNameOld
+							userDisplayNameNew: userDisplayNameNew
+						}
+					users.add(user)
+
+					# Message
+					@systemMessage 'connected', {
+						user: user
+					}
+		
+		# Return user
+		user
+	
+
 	message: (method,data) ->
 		messages = @model.get('messages')
+		message = messages.get(data.id)
 		switch method
 			when 'delete','remove'
-				messages.remove(data.id)
+				if message
+					messages.remove(data.id)
+					message = null
 			when 'create','update','add'
-				message = messages.get(data.id)
 				if message
 					message.set(data)
 				else
 					message = new App.models.Message()
 					message.set data
 					messages.add(message)
-		@
+		
+		# Return message
+		message
 
 	render: ->
 		# Values
@@ -678,10 +789,10 @@ App.views.App = App.views.Base.extend
 				event.preventDefault()
 				messageContent = $messageInput.val()
 				$messageInput.val('')
-				messages.create(
+				@message 'create', {
 					author: user
 					content: messageContent
-				)
+				}
 		
 		# Focus
 		$messageInput.focus()
