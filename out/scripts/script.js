@@ -1,7 +1,7 @@
 (function() {
   var $, App, Backbone, MD5, app, jQuery, randomFromTo, showNotification, socket, webkitNotifications, _;
 
-  webkitNotifications = window.webkitNotifications;
+  webkitNotifications = window.webkitNotifications || null;
 
   jQuery = window.jQuery;
 
@@ -23,7 +23,7 @@
     return Math.floor(Math.random() * (to - from + 1) + from);
   };
 
-  if (webkitNotifications.checkPermission()) {
+  if (webkitNotifications && webkitNotifications.checkPermission()) {
     $(document.body).click(function() {
       webkitNotifications.requestPermission();
       return $(document.body).unbind();
@@ -33,7 +33,7 @@
   showNotification = function(_arg) {
     var avatar, content, notification, timer, title;
     title = _arg.title, content = _arg.content, avatar = _arg.avatar;
-    if (!webkitNotifications.checkPermission()) {
+    if (webkitNotifications && webkitNotifications.checkPermission() === false) {
       avatar || (avatar = "");
       title || (title = "New message");
       content || (content = "");
@@ -664,15 +664,16 @@
         return _this.views.userForm.show();
       });
       $messageInput.bind('keypress', function(event) {
-        var messageContent;
+        var message, messageContent;
         if (event.keyCode === 13) {
           event.preventDefault();
           messageContent = $messageInput.val();
           $messageInput.val('');
-          return _this.message('create', {
+          message = _this.message('create', {
             author: user,
             content: messageContent
           });
+          return message.save();
         }
       });
       $messageInput.focus();
@@ -683,7 +684,7 @@
 
   $.timeago.settings.strings.seconds = "moments";
 
-  socket = io.connect('http://localhost:10113/');
+  socket = io.connect(document.location.href.replace(/(\/\/.+)\/.*$/, '$1'));
 
   Backbone.sync = function(method, model, options) {
     var data;

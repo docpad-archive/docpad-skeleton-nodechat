@@ -2,7 +2,7 @@
 # by Benjamin Lupton
 
 # Globals
-webkitNotifications = window.webkitNotifications
+webkitNotifications = window.webkitNotifications or null
 jQuery = window.jQuery
 $ = window.$
 Backbone = window.Backbone
@@ -28,7 +28,7 @@ randomFromTo = (from, to) ->
 
 # Ensure Permissions
 # If we don't have permissions, we will have to request them
-if webkitNotifications.checkPermission()
+if webkitNotifications and webkitNotifications.checkPermission()
 	# Permissions can only be enabled from a user event
 	# So do a dodgy hack to ensure they will be enabled
 	# (when a user clicks anywhere of the page, we request the permissions)
@@ -39,7 +39,7 @@ if webkitNotifications.checkPermission()
 # Setup helper
 # Provide a simpler API for our notifications
 showNotification = ({title,content,avatar}) ->
-	unless webkitNotifications.checkPermission()
+	if webkitNotifications and webkitNotifications.checkPermission() is false
 		# Ensure
 		avatar or= ""
 		title or= "New message"
@@ -789,10 +789,11 @@ App.views.App = App.views.Base.extend
 				event.preventDefault()
 				messageContent = $messageInput.val()
 				$messageInput.val('')
-				@message 'create', {
+				message = @message 'create', {
 					author: user
 					content: messageContent
 				}
+				message.save()
 		
 		# Focus
 		$messageInput.focus()
@@ -809,7 +810,7 @@ App.views.App = App.views.Base.extend
 
 # Prepare
 $.timeago.settings.strings.seconds = "moments"
-socket = io.connect('http://localhost:10113/')
+socket = io.connect document.location.href.replace /(\/\/.+)\/.*$/, '$1'
 
 # Sync
 Backbone.sync = (method,model,options) ->
