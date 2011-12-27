@@ -61,13 +61,19 @@ docpadInstance.action 'server generate', ->
 	io.sockets.on 'connection', (socket) ->
 		# Our user disconnected
 		socket.on 'disconnect', ->
-			socket.get 'user', (err,ourUser) ->
+			socket.get 'userId', (err,ourUserId) ->
 				throw err  if err
-				# Delete
-				delete store.users[ourUser.id]
-				# Broadcast
-				socket.broadcast.emit 'user', 'delete', ourUser
-	
+				# Exists
+				if ourUserId
+					# Get
+					ourUser = store.users[ourUserId]
+					# Delete
+					socket.set 'userId', null, ->
+						# Delete
+						delete store.users[ourUserId]
+						# Broadcast
+						socket.broadcast.emit 'user', 'delete', ourUser
+		
 		# User action
 		socket.on 'user', (method, data, next) ->
 			socket.get 'userId', (err,ourUserId) ->
@@ -75,11 +81,11 @@ docpadInstance.action 'server generate', ->
 				console.log 'user', method, data.id, ourUserId
 				if data.id is ourUserId
 					if  method is 'delete'
-						# Delete
-						delete store.users[data.id]
+						# Error
+						next? "you can't delete yourself"
 					else
 						# Apply
-						store.users[data.id] = data
+						store.users[ourUserId] = data
 						# Broadcast
 						socket.broadcast.emit 'user', method, data
 						next?(null,data)
@@ -87,41 +93,90 @@ docpadInstance.action 'server generate', ->
 					next? 'permission problem'
 
 		# Message action
+		# Retrieve our userId from our session
+		# Compare it with the message author
 		socket.on 'message', (method, data, next) ->
 			socket.get 'userId', (err,ourUserId) ->
 				return next?(err)  if err
 				console.log 'message', method, data.author.id, ourUserId
-				# Check
-				if data.author.id is ourUserId
-					if  method is 'delete'  and  data.id
-						# Delete
-						delete store.messages[data.id]
+				
+				# Fetch
+				ourMessage =
+					if data.id
+						store.messages[data.id] or null
 					else
-						# Apply
-						data.id = createId(store.messages)  unless data.id
-						store.messages[data.id] = data
-						# Broadcast
-						socket.broadcast.emit 'message', method, data
-						next?(null,data)
-				else
-					# Problem
-					next? 'permission problem'
+						null
+				
+				# Check
+				switch method
+					# Read
+					when 'read'
+						break
+					
+					# Delete
+					when 'delete'
+						if ourMessage
+							if ourMessage.author.id is ourUserId
+								delete store.messages[data.id]
+								ourMessage = null
+							else
+								return next? 'access denied'
+						else
+							return next? 'not found'
+						
+						# Broadcast the changes
+						socket.broadcast.emit 'message', method, ourMessage
+					
+					# Update, Create
+					when 'update', 'create'
+						# Update
+						if data.id
+							if ourMessage
+								if ourMessage.author.id is ourUserId
+									# Apply
+									ourUser = store.users[ourUserId]
+									data.author = ourUser
+									ourMessage = store.messages[data.id] = data
+								else
+									return next? 'access denied'
+							else
+								return next? 'not found'
+						
+						# Create
+						else
+							# Apply
+							data.id = createId(store.messages)  unless data.id
+							ourUser = store.users[ourUserId]
+							data.author = ourUser
+							ourMessage = store.messages[data.id] = data
+						
+						# Broadcast the changes
+						socket.broadcast.emit 'message', method, ourMessage
+				
+				# Success
+				next?(null,ourMessage)
 			
-		# Handshake1: Generate and store the userId
-		socket.on 'handshake1', (next) ->
-			# Apply
-			ourUserId = createId(store.users)
-			socket.set 'userId', ourUserId, ->
-				# Broadcast
-				next? null, ourUserId
-		
-		# Handshake1: Store the user
-		socket.on 'handshake2', (user,next) ->
-			socket.set 'user', user, ->
-				# Apply
-				store.users[user.id] = user
-				# Broadcast
-				next? null, store.users
+		# Handshake
+		# Retrieve our userId from our session
+		# If we don't have one, create one
+		# If we do have one, use that, and fetch our user object
+		# Send back ourUserId, ourUser, and store.users
+		socket.on 'handshake', (next) ->
+			# Get userId
+			socket.get 'userId', (ourUserId) ->
+				# Doesn't Exist
+				unless ourUserId
+					# Create
+					ourUserId = createId(store.users)
+					socket.set 'userId', ourUserId, ->
+						# Broadcast
+						next? null, ourUserId, null, store.users
+				# Exists
+				else
+					# Fetch
+					ourUser = store.users[ourUserId]
+					# Broadcast
+					next? null, ourUserId, ourUser or null, store.users
 
 
 # -------------------------------------

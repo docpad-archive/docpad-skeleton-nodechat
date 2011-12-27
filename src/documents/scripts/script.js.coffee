@@ -575,25 +575,11 @@ App.views.App = App.views.Base.extend
 		# Fetch
 		@el = $('#views > .app.view').clone().data('view',@)
 		
+		# Bind
+		_.bindAll @, 'onKeyPress', 'onNameChange', 'onResize'
+
 		# Super
 		@_initialize()
-	
-	resize: ->
-		$window = $(window)
-		$header = @$('.header.topbar')
-		$messagesWrapper = @$('.messages.wrapper')
-		$messagesView = $messagesWrapper.find('.messages.view')
-		$usersWrapper = @$('.users.wrapper')
-		$messageForm = @$('.messageForm')
-
-		$usersWrapper.height  $window.height()
-		$messagesWrapper.width  $window.width() - $usersWrapper.outerWidth()
-		$messageForm.width  $window.width() - $usersWrapper.outerWidth()
-		$messagesWrapper.height  $window.height() - $messageForm.outerHeight() - $header.outerHeight()
-
-		setTimeout(=>
-			$messagesWrapper.prop 'scrollTop', $messagesView.outerHeight()
-		,100)
 	
 	start: ($container) ->
 		# Prepare
@@ -607,6 +593,18 @@ App.views.App = App.views.Base.extend
 		messages = new App.collections.Messages()
 		@model.set {users,messages}
 
+		# Events
+		users
+			.bind 'add', (user) =>
+				@user('add',user,false)
+			.bind 'remove', (message) =>
+				@user('remove',user,false)
+		messages
+			.bind 'add', (message) =>
+				@message('add',message,false)
+			.bind 'remove', (message) =>
+				@message('remove',message,false)
+
 		# Models
 		system = @user 'create', {
 			id: 'system'
@@ -616,65 +614,50 @@ App.views.App = App.views.Base.extend
 		user = @user 'create', {}
 		@model.set {system,user}
 		
-		# Events
-		messages.bind 'add', (message) =>
-			# Scroll
-			@resize()
-
-			# Notify
-			messageAuthor = message.get('author')
-			unless messageAuthor.get('id') in ['system',user.get('id')]
-				showNotification(
-					title: messageAuthor.get('displayname')+' says:'
-					avatar: messageAuthor.get('avatar')
-					content: message.get('content')
-				)
-
 		# Handshake
 		socket.on 'connect', =>
 			# For now we do not support reconnections, so just refresh the entire page
-			if connectedOnce is true
-				window.location.reload()
-				return
+			#if connectedOnce is true
+			#	window.location.reload()
+			#	return
 			
 			# If we do support reconnections, hide the disconnected modal if it exists
 			if disconnectedModal
 				disconnectedModal.remove()  
 				disconnectedModal = null
 			
-			# Start our handshake to retrieve a new userId
-			socket.emit 'handshake1', (err,userId) =>
+			# Start our handshake
+			# Retrieves _ourUserId (our user id), _ourUser (our user object, if cached), and _users (list of connected users)
+			socket.emit 'handshake', (err,_ourUserId,_ourUser,_users) =>
 				throw err  if err
 
-				# We now have our new userId, so let's set it and start the second part of the handshake
-				user.set id: userId
-				socket.emit 'handshake2', user, (err,_users) =>
-					throw err  if err
+				# Retrieved our user details
+				if _ourUser
+					# Apply them
+					user.set _ourUser
+				
+				# Just retrieved a new id
+				else
+					# Apply it
+					user.set id: _ourUserId
+				
+				# Save our user
+				user.save()
 
-					# We've now applied our user to the server-side
-					# and retrieved back a list of connected users
+				# Show the appropriate message dependening on whether this is a connection or reconnection
+				if connectedOnce is true
+					@systemMessage 'reconnected', {user}
+				else
+					connectedOnce = true
+					@systemMessage 'welcome', {user}
 
-					# So let's save our existing user back to the server side
-					# as we have some client side logic in regards to display names and defaults that we want to reflect
-					user.save()
-
-					# Show the appropriate message dependening on whether this is a connection or reconnection
-					if connectedOnce is true
-						@systemMessage 'reconnected', {
-							user: user
-						}
-					else
-						connectedOnce = true
-						@systemMessage 'welcome', {
-							user: user
-						}
-
-					# Add the connected users to our application
-					_.each _users, (_user) =>
-						@user 'add', _user
-					
-					# Finally, render our application when the DOM is ready
-					$ => @render()
+				# Add the connected users to our application
+				users.reset([system,user])
+				for _userId, _user of _users
+					@user 'add', _user
+				
+				# Finally, render our application when the DOM is ready
+				$ => @render()
 
 		# Disconnect
 		socket.on 'disconnect', =>
@@ -706,130 +689,8 @@ App.views.App = App.views.Base.extend
 		# Chain
 		@
 	
-	systemMessage: (code,data) ->
-		# Create
-		switch code
-			when 'reconnected'
-				user = data.user
-				userColor = user.get('color')
-				userDisplayName = user.get('displayname')
-				ourUser = @model.get('user')
-				@message 'create', {
-					author: @model.get('system')
-					content: "Welcome back <span style='color:#{userColor}'>#{userDisplayName}</span>"
-				}
-			
-			when 'welcome'
-				user = data.user
-				userColor = user.get('color')
-				userDisplayName = user.get('displayname')
-				ourUser = @model.get('user')
-				@message 'create', {
-					author: @model.get('system')
-					content: "Welcome <span style='color:#{userColor}'>#{userDisplayName}</span>"
-				}
-			
-			when 'disconnected'
-				user = data.user
-				userColor = user.get('color')
-				userDisplayName = user.get('displayname')
-				ourUser = @model.get('user') or {}
-				unless user.id in ['system',ourUser.id]
-					@message 'create', {
-						author: @model.get('system')
-						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has disconnected"
-					}
-			
-			when 'nameChange'
-				user = data.user
-				userColor = user.get('color')
-				userDisplayNameOld = data.userDisplayNameOld
-				userDisplayNameNew = data.userDisplayNameNew
-				unless userDisplayNameOld is 'unknown'
-					@message 'create', {
-						author: @model.get('system')
-						content: "<span style='color:#{userColor}'>#{userDisplayNameOld}</span> has changed their name to <span style='color:#{userColor}'>#{userDisplayNameNew}</span>"
-					}
-			
-			when 'connected'
-				user = data.user
-				userColor = user.get('color')
-				userDisplayName = user.get('displayname')
-				ourUser = @model.get('user') or {}
-				unless user.id in ['system',ourUser.id]
-					@message 'create', {
-						author: @model.get('system')
-						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has joined"
-					}
-		
-		# Chain
-		@
-	
-	user: (method,data) ->
-		me = @
-		data or= {}
-		users = @model.get('users')
-		user = users.get(data.id)
-		switch method
-			# Delete
-			when 'delete','remove'
-				if user
-					# Message
-					@systemMessage 'disconnected', {
-						user: user
-					}
-
-					# Remove
-					users.remove(user.id)
-					user = null
-			
-			# Create, Update
-			when 'create','update','add'
-				if user
-					# Apply
-					user.set(data)
-					# Message is handled behind the scenes
-				else
-					# Create
-					user = new App.models.User()
-					user.set data
-					user.bind 'change:displayname', (model,userDisplayNameNew) ->
-						userDisplayNameOld = user.previous('displayname')
-						me.systemMessage 'nameChange', {
-							user: user
-							userDisplayNameOld: userDisplayNameOld
-							userDisplayNameNew: userDisplayNameNew
-						}
-					users.add(user)
-
-					# Message
-					@systemMessage 'connected', {
-						user: user
-					}
-		
-		# Return user
-		user
-	
-
-	message: (method,data) ->
-		messages = @model.get('messages')
-		message = messages.get(data.id)
-		switch method
-			when 'delete','remove'
-				if message
-					messages.remove(data.id)
-					message = null
-			when 'create','update','add'
-				if message
-					message.set(data)
-				else
-					message = new App.models.Message()
-					message.set data
-					messages.add(message)
-		
-		# Return message
-		message
-
+	# Render
+	# Renders our application to the user
 	render: ->
 		# Values
 		user = @model.get('user')
@@ -886,27 +747,261 @@ App.views.App = App.views.Base.extend
 			@views.userForm.show()
 		
 		# Send Message
-		$messageInput.unbind().bind 'keypress', (event) =>
-			if event.keyCode is 13 # enter
-				event.preventDefault()
-				messageContent = $messageInput.val()
-				$messageInput.val('')
-				message = @message 'create', {
-					author: user
-					content: messageContent
-				}
-				message.save()
+		$messageInput
+			.unbind('keypress',@onKeyPress)
+			.bind('keypress',@onKeyPress)
 		
 		# Focus
 		$messageInput.focus()
 		
 		# Resize
+		$(window)
+			.unbind('resize',@onResize)
+			.bind('resize',@onResize)
 		@resize()
-		$(window).unbind().resize => @resize()
 
 		# Chain
 		@
+	
+	# Resize
+	resize: ->
+		$window = $(window)
+		$header = @$('.header.topbar')
+		$messagesWrapper = @$('.messages.wrapper')
+		$messagesView = $messagesWrapper.find('.messages.view')
+		$usersWrapper = @$('.users.wrapper')
+		$messageForm = @$('.messageForm')
 
+		$usersWrapper.height  $window.height()
+		$messagesWrapper.width  $window.width() - $usersWrapper.outerWidth()
+		$messageForm.width  $window.width() - $usersWrapper.outerWidth()
+		$messagesWrapper.height  $window.height() - $messageForm.outerHeight() - $header.outerHeight()
+
+		setTimeout(=>
+			$messagesWrapper.prop 'scrollTop', $messagesView.outerHeight()
+		,100)
+	
+	# onKeyPress
+	onKeyPress: (event) ->
+		# Prepare
+		$messageInput = $(event.target)
+
+		# Enter
+		if event.keyCode is 13
+			event.preventDefault()
+			messageContent = $messageInput.val()
+			$messageInput.val('')
+			message = @message 'create', {
+				author: @model.get('user')
+				content: messageContent
+			}
+			message.save()
+	
+	# onResize
+	onResize: (event) ->
+		@resize()
+
+	# onNameChange
+	onNameChange: (model,userDisplayNameNew) ->
+		user = model
+		userDisplayNameOld = user.previous('displayname')
+		@systemMessage 'nameChange', {
+			user: user
+			userDisplayNameOld: userDisplayNameOld
+			userDisplayNameNew: userDisplayNameNew
+		}
+
+	# User
+	# Performs an action against our user
+	user: (method,data,applyToCollection) ->
+		# Prepare
+		me = @
+		data or= {}
+		users = @model.get('users')
+		user = users.get(data.id)
+		applyToCollection ?= true
+
+		# HAndle
+		switch method
+			# Get
+			when 'get'
+				# Do nothing
+				break
+			
+			# Delete
+			when 'delete','remove'
+				if user
+					# Display the disconnected system message
+					@systemMessage 'disconnected', {
+						user: user
+					}
+
+					# Destroy the user
+					# Remove it from our list of users
+					# and return null
+					users.remove(user.id)  if applyToCollection
+					user = null
+			
+			# Update, Create
+			when 'create','update','add'
+				# Update
+				if user
+					# Update our user with the data
+					# messages for this one are handled behind the scenes
+					unless data instanceof App.models.User
+						user.set(data)
+				
+				# Create
+				else
+					# Create the user with our passed data
+					# and add it to our collection of users
+					if data instanceof App.models.User
+						user = data
+					else
+						user = new App.models.User()
+					user.set data  if data
+					users.add(user)  if applyToCollection
+				
+					# Subscribe to name changes so we can display the nameChange system message
+					user
+						.unbind('change:displayname',@onNameChange)
+						.bind('change:displayname', @onNameChange)
+
+					# Display the connected system message
+					@systemMessage 'connected', {
+						user: user
+					}
+		
+		# Return user
+		user
+	
+
+	# Message
+	# Performs an action against our message
+	message: (method,data,applyToCollection) ->
+		# Prepare
+		messages = @model.get('messages')
+		message = messages.get(data.id)
+		applyToCollection ?= true
+
+		# Handle
+		switch method
+			# Get
+			when 'get'
+				# Do nothing
+				break
+			
+			# Delete
+			when 'delete','remove'
+				if message
+					# Destroy the message
+					# Remove it from our list of messages
+					# and return null
+					messages.remove(data.id)  if applyToCollection
+					message = null
+			
+			# Update, Create
+			when 'create','update','add'
+				# Update
+				if message
+					# Update our message with the data
+					unless data instanceof App.models.Message
+						message.set(data)
+				
+				# Create
+				else
+					# Create the message with our passed data
+					# and add it to our collection of message
+					if data instanceof App.models.Message
+						message = data
+					else
+						message = new App.models.Message()
+					message.set data  if data
+					messages.add(message)  if applyToCollection
+				
+				# Added?
+				if method is 'add'
+					# Scroll
+					@resize()
+
+					# Notify
+					@systemMessage 'newMessage', {message}
+		
+		# Return message
+		message
+
+	# systemMessage
+	# Display a particular system message to the user
+	systemMessage: (code,data) ->
+		# Create
+		switch code
+			when 'newMessage'
+				message = data.message
+				messageAuthor = message.get('author')
+				ourUser = @model.get('user')
+				unless messageAuthor.get('id') in ['system',ourUser.get('id')]
+					showNotification(
+						title: messageAuthor.get('displayname')+' says:'
+						avatar: messageAuthor.get('avatar')
+						content: message.get('content')
+					)
+			
+			when 'reconnected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user')
+				@message 'create', {
+					author: @model.get('system')
+					content: "Welcome back <span style='color:#{userColor}'>#{userDisplayName}</span>"
+				}
+			
+			when 'welcome'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user')
+				@message 'create', {
+					author: @model.get('system')
+					content: "Welcome <span style='color:#{userColor}'>#{userDisplayName}</span>"
+				}
+			
+			when 'disconnected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user') or {}
+				unless user.id in ['system',ourUser.id]
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has disconnected"
+					}
+			
+			when 'nameChange'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayNameOld = data.userDisplayNameOld
+				userDisplayNameNew = data.userDisplayNameNew
+				unless userDisplayNameOld is 'unknown'
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayNameOld}</span> has changed their name to <span style='color:#{userColor}'>#{userDisplayNameNew}</span>"
+					}
+			
+			when 'connected'
+				user = data.user
+				userColor = user.get('color')
+				userDisplayName = user.get('displayname')
+				ourUser = @model.get('user') or {}
+				unless user.id in ['system',ourUser.id]
+					@message 'create', {
+						author: @model.get('system')
+						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has joined"
+					}
+		
+		# Chain
+		@
+	
 
 # =====================================
 # Application

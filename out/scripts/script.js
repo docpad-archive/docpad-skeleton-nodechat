@@ -464,24 +464,8 @@
   App.views.App = App.views.Base.extend({
     initialize: function() {
       this.el = $('#views > .app.view').clone().data('view', this);
+      _.bindAll(this, 'onKeyPress', 'onNameChange', 'onResize');
       return this._initialize();
-    },
-    resize: function() {
-      var $header, $messageForm, $messagesView, $messagesWrapper, $usersWrapper, $window;
-      var _this = this;
-      $window = $(window);
-      $header = this.$('.header.topbar');
-      $messagesWrapper = this.$('.messages.wrapper');
-      $messagesView = $messagesWrapper.find('.messages.view');
-      $usersWrapper = this.$('.users.wrapper');
-      $messageForm = this.$('.messageForm');
-      $usersWrapper.height($window.height());
-      $messagesWrapper.width($window.width() - $usersWrapper.outerWidth());
-      $messageForm.width($window.width() - $usersWrapper.outerWidth());
-      $messagesWrapper.height($window.height() - $messageForm.outerHeight() - $header.outerHeight());
-      return setTimeout(function() {
-        return $messagesWrapper.prop('scrollTop', $messagesView.outerHeight());
-      }, 100);
     },
     start: function($container) {
       var connectedOnce, disconnectedModal, me, messages, socket, system, user, users;
@@ -496,6 +480,16 @@
         users: users,
         messages: messages
       });
+      users.bind('add', function(user) {
+        return _this.user('add', user, false);
+      }).bind('remove', function(message) {
+        return _this.user('remove', user, false);
+      });
+      messages.bind('add', function(message) {
+        return _this.message('add', message, false);
+      }).bind('remove', function(message) {
+        return _this.message('remove', message, false);
+      });
       system = this.user('create', {
         id: 'system',
         displayname: 'system',
@@ -506,51 +500,39 @@
         system: system,
         user: user
       });
-      messages.bind('add', function(message) {
-        var messageAuthor, _ref;
-        _this.resize();
-        messageAuthor = message.get('author');
-        if ((_ref = messageAuthor.get('id')) !== 'system' && _ref !== user.get('id')) {
-          return showNotification({
-            title: messageAuthor.get('displayname') + ' says:',
-            avatar: messageAuthor.get('avatar'),
-            content: message.get('content')
-          });
-        }
-      });
       socket.on('connect', function() {
-        if (connectedOnce === true) {
-          window.location.reload();
-          return;
-        }
         if (disconnectedModal) {
           disconnectedModal.remove();
           disconnectedModal = null;
         }
-        return socket.emit('handshake1', function(err, userId) {
+        return socket.emit('handshake', function(err, _ourUserId, _ourUser, _users) {
+          var _user, _userId;
           if (err) throw err;
-          user.set({
-            id: userId
-          });
-          return socket.emit('handshake2', user, function(err, _users) {
-            if (err) throw err;
-            user.save();
-            if (connectedOnce === true) {
-              _this.systemMessage('reconnected', {
-                user: user
-              });
-            } else {
-              connectedOnce = true;
-              _this.systemMessage('welcome', {
-                user: user
-              });
-            }
-            _.each(_users, function(_user) {
-              return _this.user('add', _user);
+          if (_ourUser) {
+            user.set(_ourUser);
+          } else {
+            user.set({
+              id: _ourUserId
             });
-            return $(function() {
-              return _this.render();
+          }
+          user.save();
+          if (connectedOnce === true) {
+            _this.systemMessage('reconnected', {
+              user: user
             });
+          } else {
+            connectedOnce = true;
+            _this.systemMessage('welcome', {
+              user: user
+            });
+          }
+          users.reset([system, user]);
+          for (_userId in _users) {
+            _user = _users[_userId];
+            _this.user('add', _user);
+          }
+          return $(function() {
+            return _this.render();
           });
         });
       });
@@ -577,134 +559,6 @@
         return _this.message(method, data);
       });
       return this;
-    },
-    systemMessage: function(code, data) {
-      var ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref2;
-      switch (code) {
-        case 'reconnected':
-          user = data.user;
-          userColor = user.get('color');
-          userDisplayName = user.get('displayname');
-          ourUser = this.model.get('user');
-          this.message('create', {
-            author: this.model.get('system'),
-            content: "Welcome back <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
-          });
-          break;
-        case 'welcome':
-          user = data.user;
-          userColor = user.get('color');
-          userDisplayName = user.get('displayname');
-          ourUser = this.model.get('user');
-          this.message('create', {
-            author: this.model.get('system'),
-            content: "Welcome <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
-          });
-          break;
-        case 'disconnected':
-          user = data.user;
-          userColor = user.get('color');
-          userDisplayName = user.get('displayname');
-          ourUser = this.model.get('user') || {};
-          if ((_ref = user.id) !== 'system' && _ref !== ourUser.id) {
-            this.message('create', {
-              author: this.model.get('system'),
-              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has disconnected"
-            });
-          }
-          break;
-        case 'nameChange':
-          user = data.user;
-          userColor = user.get('color');
-          userDisplayNameOld = data.userDisplayNameOld;
-          userDisplayNameNew = data.userDisplayNameNew;
-          if (userDisplayNameOld !== 'unknown') {
-            this.message('create', {
-              author: this.model.get('system'),
-              content: "<span style='color:" + userColor + "'>" + userDisplayNameOld + "</span> has changed their name to <span style='color:" + userColor + "'>" + userDisplayNameNew + "</span>"
-            });
-          }
-          break;
-        case 'connected':
-          user = data.user;
-          userColor = user.get('color');
-          userDisplayName = user.get('displayname');
-          ourUser = this.model.get('user') || {};
-          if ((_ref2 = user.id) !== 'system' && _ref2 !== ourUser.id) {
-            this.message('create', {
-              author: this.model.get('system'),
-              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has joined"
-            });
-          }
-      }
-      return this;
-    },
-    user: function(method, data) {
-      var me, user, users;
-      me = this;
-      data || (data = {});
-      users = this.model.get('users');
-      user = users.get(data.id);
-      switch (method) {
-        case 'delete':
-        case 'remove':
-          if (user) {
-            this.systemMessage('disconnected', {
-              user: user
-            });
-            users.remove(user.id);
-            user = null;
-          }
-          break;
-        case 'create':
-        case 'update':
-        case 'add':
-          if (user) {
-            user.set(data);
-          } else {
-            user = new App.models.User();
-            user.set(data);
-            user.bind('change:displayname', function(model, userDisplayNameNew) {
-              var userDisplayNameOld;
-              userDisplayNameOld = user.previous('displayname');
-              return me.systemMessage('nameChange', {
-                user: user,
-                userDisplayNameOld: userDisplayNameOld,
-                userDisplayNameNew: userDisplayNameNew
-              });
-            });
-            users.add(user);
-            this.systemMessage('connected', {
-              user: user
-            });
-          }
-      }
-      return user;
-    },
-    message: function(method, data) {
-      var message, messages;
-      messages = this.model.get('messages');
-      message = messages.get(data.id);
-      switch (method) {
-        case 'delete':
-        case 'remove':
-          if (message) {
-            messages.remove(data.id);
-            message = null;
-          }
-          break;
-        case 'create':
-        case 'update':
-        case 'add':
-          if (message) {
-            message.set(data);
-          } else {
-            message = new App.models.Message();
-            message.set(data);
-            messages.add(message);
-          }
-      }
-      return message;
     },
     render: function() {
       var $editUserButton, $messageInput, $messages, $notificationList, $userForm, $users, messages, user, users;
@@ -744,24 +598,206 @@
       $editUserButton.unbind().click(function() {
         return _this.views.userForm.show();
       });
-      $messageInput.unbind().bind('keypress', function(event) {
-        var message, messageContent;
-        if (event.keyCode === 13) {
-          event.preventDefault();
-          messageContent = $messageInput.val();
-          $messageInput.val('');
-          message = _this.message('create', {
-            author: user,
-            content: messageContent
-          });
-          return message.save();
-        }
-      });
+      $messageInput.unbind('keypress', this.onKeyPress).bind('keypress', this.onKeyPress);
       $messageInput.focus();
+      $(window).unbind('resize', this.onResize).bind('resize', this.onResize);
       this.resize();
-      $(window).unbind().resize(function() {
-        return _this.resize();
+      return this;
+    },
+    resize: function() {
+      var $header, $messageForm, $messagesView, $messagesWrapper, $usersWrapper, $window;
+      var _this = this;
+      $window = $(window);
+      $header = this.$('.header.topbar');
+      $messagesWrapper = this.$('.messages.wrapper');
+      $messagesView = $messagesWrapper.find('.messages.view');
+      $usersWrapper = this.$('.users.wrapper');
+      $messageForm = this.$('.messageForm');
+      $usersWrapper.height($window.height());
+      $messagesWrapper.width($window.width() - $usersWrapper.outerWidth());
+      $messageForm.width($window.width() - $usersWrapper.outerWidth());
+      $messagesWrapper.height($window.height() - $messageForm.outerHeight() - $header.outerHeight());
+      return setTimeout(function() {
+        return $messagesWrapper.prop('scrollTop', $messagesView.outerHeight());
+      }, 100);
+    },
+    onKeyPress: function(event) {
+      var $messageInput, message, messageContent;
+      $messageInput = $(event.target);
+      if (event.keyCode === 13) {
+        event.preventDefault();
+        messageContent = $messageInput.val();
+        $messageInput.val('');
+        message = this.message('create', {
+          author: this.model.get('user'),
+          content: messageContent
+        });
+        return message.save();
+      }
+    },
+    onResize: function(event) {
+      return this.resize();
+    },
+    onNameChange: function(model, userDisplayNameNew) {
+      var user, userDisplayNameOld;
+      user = model;
+      userDisplayNameOld = user.previous('displayname');
+      return this.systemMessage('nameChange', {
+        user: user,
+        userDisplayNameOld: userDisplayNameOld,
+        userDisplayNameNew: userDisplayNameNew
       });
+    },
+    user: function(method, data, applyToCollection) {
+      var me, user, users;
+      me = this;
+      data || (data = {});
+      users = this.model.get('users');
+      user = users.get(data.id);
+      if (applyToCollection == null) applyToCollection = true;
+      switch (method) {
+        case 'get':
+          break;
+        case 'delete':
+        case 'remove':
+          if (user) {
+            this.systemMessage('disconnected', {
+              user: user
+            });
+            if (applyToCollection) users.remove(user.id);
+            user = null;
+          }
+          break;
+        case 'create':
+        case 'update':
+        case 'add':
+          if (user) {
+            if (!(data instanceof App.models.User)) user.set(data);
+          } else {
+            if (data instanceof App.models.User) {
+              user = data;
+            } else {
+              user = new App.models.User();
+            }
+            if (data) user.set(data);
+            if (applyToCollection) users.add(user);
+            user.unbind('change:displayname', this.onNameChange).bind('change:displayname', this.onNameChange);
+            this.systemMessage('connected', {
+              user: user
+            });
+          }
+      }
+      return user;
+    },
+    message: function(method, data, applyToCollection) {
+      var message, messages;
+      messages = this.model.get('messages');
+      message = messages.get(data.id);
+      if (applyToCollection == null) applyToCollection = true;
+      switch (method) {
+        case 'get':
+          break;
+        case 'delete':
+        case 'remove':
+          if (message) {
+            if (applyToCollection) messages.remove(data.id);
+            message = null;
+          }
+          break;
+        case 'create':
+        case 'update':
+        case 'add':
+          if (message) {
+            if (!(data instanceof App.models.Message)) message.set(data);
+          } else {
+            if (data instanceof App.models.Message) {
+              message = data;
+            } else {
+              message = new App.models.Message();
+            }
+            if (data) message.set(data);
+            if (applyToCollection) messages.add(message);
+          }
+          if (method === 'add') {
+            this.resize();
+            this.systemMessage('newMessage', {
+              message: message
+            });
+          }
+      }
+      return message;
+    },
+    systemMessage: function(code, data) {
+      var message, messageAuthor, ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref2, _ref3;
+      switch (code) {
+        case 'newMessage':
+          message = data.message;
+          messageAuthor = message.get('author');
+          ourUser = this.model.get('user');
+          if ((_ref = messageAuthor.get('id')) !== 'system' && _ref !== ourUser.get('id')) {
+            showNotification({
+              title: messageAuthor.get('displayname') + ' says:',
+              avatar: messageAuthor.get('avatar'),
+              content: message.get('content')
+            });
+          }
+          break;
+        case 'reconnected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user');
+          this.message('create', {
+            author: this.model.get('system'),
+            content: "Welcome back <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
+          });
+          break;
+        case 'welcome':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user');
+          this.message('create', {
+            author: this.model.get('system'),
+            content: "Welcome <span style='color:" + userColor + "'>" + userDisplayName + "</span>"
+          });
+          break;
+        case 'disconnected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user') || {};
+          if ((_ref2 = user.id) !== 'system' && _ref2 !== ourUser.id) {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has disconnected"
+            });
+          }
+          break;
+        case 'nameChange':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayNameOld = data.userDisplayNameOld;
+          userDisplayNameNew = data.userDisplayNameNew;
+          if (userDisplayNameOld !== 'unknown') {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayNameOld + "</span> has changed their name to <span style='color:" + userColor + "'>" + userDisplayNameNew + "</span>"
+            });
+          }
+          break;
+        case 'connected':
+          user = data.user;
+          userColor = user.get('color');
+          userDisplayName = user.get('displayname');
+          ourUser = this.model.get('user') || {};
+          if ((_ref3 = user.id) !== 'system' && _ref3 !== ourUser.id) {
+            this.message('create', {
+              author: this.model.get('system'),
+              content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has joined"
+            });
+          }
+      }
       return this;
     }
   });

@@ -27,7 +27,7 @@ html lang: 'en', ->
 		# Scripts
 		script src: '/vendor/jquery-1.7.1.min.js'
 		script src: '/vendor/modernizr-2.0.6.min.js'
-		script src: '/vendor/underscore-1.2.2.min.js'
+		script src: '/vendor/underscore-1.2.3.js'
 		script src: '/vendor/backbone-0.5.3.js'
 		#script src: '/vendor/xdate-0.5.min.js'
 		#script src: '/vendor/bootstrap/js/bootstrap-modal.js'

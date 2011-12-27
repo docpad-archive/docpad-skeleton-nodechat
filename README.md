@@ -27,6 +27,7 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 - Webkit chat notifications so you'll always notified
 - See who's actively connected
 - Times are all relative (e.g. '5 minutes ago')
+- Supports reconnections
 
 
 ## Emphasis
@@ -72,7 +73,6 @@ These technologies work together really really well, as because a chat applicati
 - When you click a user in the sidebar, it should insert `@#{user.get('displayname')}` into the composer
 - Notifications for when people are typing
 - Notifications only when you are mentioned
-- Proper reconnection support
 - Better iPhone support
 - Drag and drop files to the cloud support
 - Private conversations support
