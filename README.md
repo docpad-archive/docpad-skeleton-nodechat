@@ -69,7 +69,15 @@ These technologies work together really really well, as because a chat applicati
 
 - Documentation
 - Add the about page
-
+- When you click a user in the sidebar, it should insert `@#{user.get('displayname')}` into the composer
+- Notifications for when people are typing
+- Notifications only when you are mentioned
+- Proper reconnection support
+- Better iPhone support
+- Drag and drop files to the cloud support
+- Private conversations support
+- Multiple room support
+- System commands. E.g. `/nick Your New Displayname`
 
 
 ## License
