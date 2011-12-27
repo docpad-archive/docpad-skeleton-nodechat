@@ -72,7 +72,7 @@
       avatar: null
     },
     initialize: function() {
-      var cid, color, displayname, hue;
+      var cid, color, displayname, hue, lightness, saturation;
       var _this = this;
       cid = this.cid;
       color = this.get('color');
@@ -93,7 +93,9 @@
       });
       if (!color) {
         hue = randomFromTo(0, 360);
-        color = "hsl(" + hue + ", 75%, 40%)";
+        saturation = randomFromTo(30, 80) + '%';
+        lightness = '45%';
+        color = "hsl(" + hue + ", " + saturation + ", " + lightness + ")";
         this.set({
           color: color
         });

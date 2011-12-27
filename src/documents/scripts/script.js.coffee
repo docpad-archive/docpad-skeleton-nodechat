@@ -106,7 +106,9 @@ App.models.User = App.models.Base.extend
 		# Ensure color
 		unless color
 			hue = randomFromTo(0,360)
-			color = "hsl(#{hue}, 75%, 40%)"
+			saturation = randomFromTo(30,80)+'%'
+			lightness = '45%'
+			color = "hsl(#{hue}, #{saturation}, #{lightness})"
 			@set {color}
 		
 		# Ensure Gravatar
