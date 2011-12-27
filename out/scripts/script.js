@@ -469,7 +469,7 @@
   App.views.App = App.views.Base.extend({
     initialize: function() {
       this.el = $('#views > .app.view').clone().data('view', this);
-      _.bindAll(this, 'onKeyPress', 'onNameChange', 'onResize');
+      _.bindAll(this, 'onKeyPress', 'onNameChange', 'onResize', 'onUserClick');
       return this._initialize();
     },
     start: function($container) {
@@ -605,6 +605,7 @@
       });
       $messageInput.unbind('keypress', this.onKeyPress).bind('keypress', this.onKeyPress);
       $messageInput.focus();
+      $users.add($messages).off('click', '.user.view', this.onUserClick).on('click', '.user.view', this.onUserClick);
       $(window).unbind('resize', this.onResize).bind('resize', this.onResize);
       this.resize();
       return this;
@@ -625,6 +626,18 @@
       return setTimeout(function() {
         return $messagesWrapper.prop('scrollTop', $messagesView.outerHeight());
       }, 100);
+    },
+    onUserClick: function(event) {
+      var $messageInput, $user, messageContent, user, userDisplayname, view;
+      $user = $(event.target);
+      if (!$user.is('.user.view')) $user = $user.parents('.user.view:first');
+      if ($user.length === 0) return;
+      $messageInput = this.$('.messageInput');
+      view = $user.data('view');
+      user = view.model;
+      userDisplayname = user.get('displayname');
+      messageContent = $messageInput.val();
+      return $messageInput.focus().val(("" + messageContent + " @" + userDisplayname + " ").replace(/^\s+/, ''));
     },
     onKeyPress: function(event) {
       var $messageInput, message, messageContent;
@@ -695,7 +708,7 @@
       return user;
     },
     message: function(method, data, applyToCollection) {
-      var message, messages;
+      var mentionString, message, messageContent, messageContentEnhanced, messages, ourUserDisplayName;
       messages = this.model.get('messages');
       message = messages.get(data.id);
       if (applyToCollection == null) applyToCollection = true;
@@ -722,6 +735,15 @@
             }
             if (data) message.set(data);
             if (applyToCollection) messages.add(message);
+          }
+          messageContent = message.get('content') || '';
+          ourUserDisplayName = this.model.get('user').get('displayname');
+          mentionString = "@" + ourUserDisplayName;
+          messageContentEnhanced = messageContent.replace(mentionString, "**" + mentionString + "**");
+          if (messageContentEnhanced !== messageContent) {
+            message.set({
+              content: messageContentEnhanced
+            });
           }
           if (method === 'add') {
             this.resize();

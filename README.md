@@ -70,7 +70,6 @@ These technologies work together really really well, as because a chat applicati
 ## Todo / Known-issues
 
 - Developer Documentation
-- When you click a user in the sidebar, it should insert `@#{user.get('displayname')}` into the composer
 - Autocomplete of people's names when you type `@` in the composer
 - Notifications for when people are typing
 - Notifications only when you are mentioned

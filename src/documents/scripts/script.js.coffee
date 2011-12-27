@@ -581,7 +581,7 @@ App.views.App = App.views.Base.extend
 		@el = $('#views > .app.view').clone().data('view',@)
 		
 		# Bind
-		_.bindAll @, 'onKeyPress', 'onNameChange', 'onResize'
+		_.bindAll @, 'onKeyPress', 'onNameChange', 'onResize', 'onUserClick'
 
 		# Super
 		@_initialize()
@@ -758,6 +758,11 @@ App.views.App = App.views.Base.extend
 		
 		# Focus
 		$messageInput.focus()
+
+		# User click
+		$users.add($messages)
+			.off('click', '.user.view', @onUserClick)
+			.on('click', '.user.view', @onUserClick)
 		
 		# Resize
 		$(window)
@@ -786,6 +791,25 @@ App.views.App = App.views.Base.extend
 			$messagesWrapper.prop 'scrollTop', $messagesView.outerHeight()
 		,100)
 	
+	# onUserClick
+	onUserClick: (event) ->
+		# Check
+		$user = $(event.target)
+		$user = $user.parents('.user.view:first')  unless $user.is('.user.view')
+		return  if $user.length is 0
+
+		# Prepare
+		$messageInput = @$('.messageInput')
+		view = $user.data('view')
+		user = view.model
+		userDisplayname = user.get('displayname')
+
+		# Apply
+		messageContent = $messageInput.val()
+		$messageInput
+			.focus()
+			.val("#{messageContent} @#{userDisplayname} ".replace(/^\s+/,''))
+
 	# onKeyPress
 	onKeyPress: (event) ->
 		# Prepare
@@ -924,6 +948,14 @@ App.views.App = App.views.Base.extend
 					message.set data  if data
 					messages.add(message)  if applyToCollection
 				
+				# Make mentions of us bold
+				messageContent = message.get('content') or ''
+				ourUserDisplayName = @model.get('user').get('displayname')
+				mentionString = "@#{ourUserDisplayName}"
+				messageContentEnhanced = messageContent.replace mentionString, "**#{mentionString}**"
+				if messageContentEnhanced isnt messageContent
+					message.set content: messageContentEnhanced  
+
 				# Added?
 				if method is 'add'
 					# Scroll

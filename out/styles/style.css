@@ -18,11 +18,12 @@ a{cursor:pointer}
 .app.view > .header .editUserButton{margin-top:5px}
 .app.view > .header .container,.app.view > .header .container-fluid{width:99%}
 .app.view > .body{width:100%;position:absolute;left:0;top:40px;padding:0;}
+.app.view > .body .messages.wrapper .user.view,.app.view > .body .users.wrapper .user.view{cursor:pointer}
 .app.view > .body .messages.wrapper{width:80%;padding:0 1em;margin:1em 0;overflow:scroll;}
 .app.view > .body .messages.wrapper .page-header{display:none}
 .app.view > .body .users.wrapper{width:190px;position:fixed;top:40px;right:1em;padding:0 1em;margin:1em 0;overflow:scroll;}
 .app.view > .body .users.wrapper .userList .user.wrapper{width:150px;overflow:hidden;}
-.app.view > .body .users.wrapper .userList .user.wrapper .user.view{cursor:pointer;width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app.view > .body .users.wrapper .userList .user.wrapper .user.view{width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .app.view > .body .users.wrapper .userList .user.wrapper .user.view .id,.app.view > .body .users.wrapper .userList .user.wrapper .user.view .email{display:none !important}
 .app.view > .body .users.wrapper .userList .user.wrapper .user.view .displayname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app.view > .body .messageForm{position:fixed;bottom:0;left:0;width:80%;padding:1em;min-height:3em;}
