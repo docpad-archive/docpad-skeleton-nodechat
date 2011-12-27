@@ -22,8 +22,9 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 ## Features
 
 - Send and receive messages instantly (no sign-in required)
+- [Markdown](http://daringfireball.net/projects/markdown/basics) support for messages
 - User information updates are synced to everybody
-- Gravatars to see who you are chatting to
+- [Gravatars](http://gravatar.com) to see who you are chatting to
 - Webkit chat notifications so you'll always notified
 - See who's actively connected
 - Times are all relative (e.g. '5 minutes ago')
@@ -68,15 +69,16 @@ These technologies work together really really well, as because a chat applicati
 
 ## Todo / Known-issues
 
-- Documentation
-- Add the about page
+- Developer Documentation
 - When you click a user in the sidebar, it should insert `@#{user.get('displayname')}` into the composer
+- Autocomplete of people's names when you type `@` in the composer
 - Notifications for when people are typing
 - Notifications only when you are mentioned
 - Better iPhone support
 - Drag and drop files to the cloud support
 - Private conversations support
 - Multiple room support
+- Private room support
 - System commands. E.g. `/nick Your New Displayname`
 - When people mouse over a username, they should get all the user details
 - When people mouse over a relative time, they should get the absolute time

@@ -376,7 +376,10 @@
       if (author.get('id') === 'system') {
         $content.html(content);
       } else {
-        $content.text(content);
+        this.markdown || (this.markdown = new Showdown.converter());
+        content = this.markdown.makeHtml(content);
+        content = window.html_sanitize(content);
+        $content.html(content);
       }
       $time = $("<time>").attr('datetime', posted.toUTCString()).appendTo($posted.empty()).timeago(posted);
       this.views.author = new App.views.User({

@@ -33,6 +33,9 @@ html lang: 'en', ->
 		#script src: '/vendor/bootstrap/js/bootstrap-modal.js'
 		script src: '/vendor/webtoolkit.md5.js'
 		script src: '/vendor/jquery.timeago.js'
+		script src: '/vendor/github-flavored-markdown.js'
+		script src: '/vendor/html4-defs.js'
+		script src: '/vendor/html-sanitizer.js'
 		script src: '/socket.io/socket.io.js'
 		script src: '/scripts/script.js'
 		text @blocks.scripts.join('')

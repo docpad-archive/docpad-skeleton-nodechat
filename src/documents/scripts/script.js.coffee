@@ -456,7 +456,10 @@ App.views.Message = App.views.Base.extend
 		if author.get('id') is 'system'
 			$content.html(content)
 		else
-			$content.text(content)
+			@markdown or= new Showdown.converter()
+			content = @markdown.makeHtml(content)
+			content = window.html_sanitize(content)
+			$content.html(content)
 		$time = $("<time>").attr('datetime',posted.toUTCString()).appendTo($posted.empty()).timeago(posted)
 
 		# Author
