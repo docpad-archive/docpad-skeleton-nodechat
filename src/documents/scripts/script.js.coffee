@@ -45,7 +45,7 @@ showNotification = ({title,content,avatar}) ->
 		title or= "New message"
 		content or= ""
 		timer = null
-		
+
 		# Create and display notification
 		notification = webkitNotifications.createNotification(avatar, title, content)
 		notification.ondisplay = ->
@@ -87,7 +87,7 @@ App.models.User = App.models.Base.extend
 		email: null # email
 		displayname: null # string
 		avatar: null # url
-	
+
 	initialize: ->
 		# Fetch values
 		cid = @cid
@@ -102,7 +102,7 @@ App.models.User = App.models.Base.extend
 			displayname = @get('displayname')
 			if displayname is 'unknown' or !displayname
 				@set displayname: "User #{id}"
-		
+
 		# Ensure color
 		unless color
 			hue = randomFromTo(0,360)
@@ -110,7 +110,7 @@ App.models.User = App.models.Base.extend
 			lightness = randomFromTo(40,47)+'%'
 			color = "hsl(#{hue}, #{saturation}, #{lightness})"
 			@set {color}
-		
+
 		# Ensure Gravatar
 		@bind 'change:email', (model,email) =>
 			if email
@@ -136,7 +136,7 @@ App.models.Message = App.models.Base.extend
 		content: null # string
 		author: null # user
 		color: null # string
-	
+
 	initialize: ->
 		# Fetch values
 		posted = @get('posted')
@@ -146,14 +146,14 @@ App.models.Message = App.models.Base.extend
 			if author
 				unless author instanceof App.models.User
 					@set author: new App.models.User(author)
-		
+
 		# Ensure Posted
 		@bind 'change:posted', (model,posted) ->
 			if posted
 				unless posted instanceof Date
 					@set posted: new Date(posted)
 		@set posted: new Date()  unless posted
-			
+
 		# Chain
 		@
 
@@ -193,10 +193,10 @@ App.views.Base = Backbone.View.extend
 		if @el and @options.container
 			@el.appendTo(@options.container)
 		@
-	
+
 	initialize: ->
 		@_initialize()
-	
+
 
 
 # -------------------------------------
@@ -206,14 +206,14 @@ App.views.UserForm = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .userForm.view').clone().data('view',@)
-	
+
 		# Model Events
 		@model.bind 'change', =>
 			@populate()
 
 		# Super
 		@_initialize()
-	
+
 	populate: ->
 		# Fetch
 		id = @model.get('id')
@@ -251,14 +251,14 @@ App.views.UserForm = App.views.Base.extend
 		$cancelButton.add($closeButton).click =>
 			@hide()
 			@populate()
-		
+
 		# Chain
 		@
-	
+
 	hide: ->
 		@el.hide()
 		@
-	
+
 	show: ->
 		@el.show()
 		$displayname = @$('.displayname')
@@ -273,16 +273,16 @@ App.views.Users = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .users.view').clone().data('view',@)
-		
+
 		# Model Events
 		@model.bind 'add', (user) =>
 			@addUser user
 		@model.bind 'remove', (user) =>
 			@removeUser user
-		
+
 		# Super
 		@_initialize()
-	
+
 	addUser: (user) ->
 		# Prepare
 		$userList = @$('.userList')
@@ -297,7 +297,7 @@ App.views.Users = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	removeUser: (user) ->
 		# Prepare
 		$userList = @$('.userList')
@@ -310,7 +310,7 @@ App.views.Users = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	populate: ->
 		# Prepare
 		@views = {}
@@ -320,10 +320,10 @@ App.views.Users = App.views.Base.extend
 		# Messages
 		users.each (user) =>
 			@addUser(user)
-		
+
 		# Chain
 		@
-	
+
 	render: ->
 		# Prepare
 		@populate()
@@ -338,14 +338,14 @@ App.views.User = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .user.view').clone().data('view',@)
-		
+
 		# Model Events
 		@model.bind 'change', =>
 			@populate()
 
 		# Super
 		@_initialize()
-	
+
 	populate: ->
 		# Fetch
 		id = @model.get('id')
@@ -371,7 +371,7 @@ App.views.User = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	render: ->
 		# Prepare
 		@populate()
@@ -386,14 +386,14 @@ App.views.Messages = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .messages.view').clone().data('view',@)
-		
+
 		# Model Events
 		@model.bind 'add', (message) =>
 			@addMessage message
-		
+
 		# Super
 		@_initialize()
-	
+
 	addMessage: (message) ->
 		# Prepare
 		$messageList = @$('.messageList')
@@ -408,7 +408,7 @@ App.views.Messages = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	populate: ->
 		# Prepare
 		@views = {}
@@ -418,10 +418,10 @@ App.views.Messages = App.views.Base.extend
 		# Messages
 		messages.each (message) =>
 			@addMessage(message)
-		
+
 		# Chain
 		@
-	
+
 	render: ->
 		# Prepare
 		@populate()
@@ -436,10 +436,10 @@ App.views.Message = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views .message.view').clone().data('view',@)
-		
+
 		# Super
 		@_initialize()
-	
+
 	populate: ->
 		# Elements
 		$id = @$('.id')
@@ -488,10 +488,10 @@ App.views.Modal = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .modal.view').clone().data('view',@)
-		
+
 		# Super
 		@_initialize()
-	
+
 	populate: ->
 		# Fetch
 		title = @options.title
@@ -533,10 +533,10 @@ App.views.Notification = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .notification.view').clone().data('view',@)
-		
+
 		# Super
 		@_initialize()
-	
+
 	populate: ->
 		# Fetch
 		title = @options.title
@@ -579,13 +579,13 @@ App.views.App = App.views.Base.extend
 	initialize: ->
 		# Fetch
 		@el = $('#views > .app.view').clone().data('view',@)
-		
+
 		# Bind
 		_.bindAll @, 'onKeyPress', 'onNameChange', 'onResize', 'onUserClick'
 
 		# Super
 		@_initialize()
-	
+
 	start: ($container) ->
 		# Prepare
 		me = @
@@ -618,19 +618,19 @@ App.views.App = App.views.Base.extend
 		}
 		user = @user 'create', {}
 		@model.set {system,user}
-		
+
 		# Handshake
 		socket.on 'connect', =>
 			# For now we do not support reconnections, so just refresh the entire page
 			#if connectedOnce is true
 			#	window.location.reload()
 			#	return
-			
+
 			# If we do support reconnections, hide the disconnected modal if it exists
 			if disconnectedModal
-				disconnectedModal.remove()  
+				disconnectedModal.remove()
 				disconnectedModal = null
-			
+
 			# Start our handshake
 			# Retrieves _ourUserId (our user id), _ourUser (our user object, if cached), and _users (list of connected users)
 			socket.emit 'handshake', (err,_ourUserId,_ourUser,_users) =>
@@ -640,12 +640,12 @@ App.views.App = App.views.Base.extend
 				if _ourUser
 					# Apply them
 					user.set _ourUser
-				
+
 				# Just retrieved a new id
 				else
 					# Apply it
 					user.set id: _ourUserId
-				
+
 				# Save our user
 				user.save()
 
@@ -660,7 +660,7 @@ App.views.App = App.views.Base.extend
 				users.reset([system,user])
 				for _userId, _user of _users
 					@user 'add', _user
-				
+
 				# Finally, render our application when the DOM is ready
 				$ => @render()
 
@@ -680,12 +680,12 @@ App.views.App = App.views.Base.extend
 					}
 				]
 			).render()
-		
+
 		# User
 		socket.on 'user', (method,data) =>
 			# We have received some changes to a user
 			@user(method,data)
-		
+
 		# Message
 		socket.on 'message', (method,data) =>
 			# We have received some changes to a message
@@ -693,7 +693,7 @@ App.views.App = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	# Render
 	# Renders our application to the user
 	render: ->
@@ -713,7 +713,7 @@ App.views.App = App.views.Base.extend
 
 		# -----------------------------
 		# Views
-	
+
 		# Views
 		@views = {}
 
@@ -746,16 +746,16 @@ App.views.App = App.views.Base.extend
 
 		# -----------------------------
 		# Element Events
-	
+
 		# Edit User
 		$editUserButton.unbind().click =>
 			@views.userForm.show()
-		
+
 		# Send Message
 		$messageInput
 			.unbind('keypress',@onKeyPress)
 			.bind('keypress',@onKeyPress)
-		
+
 		# Focus
 		$messageInput.focus()
 
@@ -763,7 +763,7 @@ App.views.App = App.views.Base.extend
 		$users.add($messages)
 			.off('click', '.user.view', @onUserClick)
 			.on('click', '.user.view', @onUserClick)
-		
+
 		# Resize
 		$(window)
 			.unbind('resize',@onResize)
@@ -772,7 +772,7 @@ App.views.App = App.views.Base.extend
 
 		# Chain
 		@
-	
+
 	# Resize
 	resize: ->
 		$window = $(window)
@@ -790,7 +790,7 @@ App.views.App = App.views.Base.extend
 		setTimeout(=>
 			$messagesWrapper.prop 'scrollTop', $messagesView.outerHeight()
 		,100)
-	
+
 	# onUserClick
 	onUserClick: (event) ->
 		# Check
@@ -825,7 +825,7 @@ App.views.App = App.views.Base.extend
 				content: messageContent
 			}
 			message.save()
-	
+
 	# onResize
 	onResize: (event) ->
 		@resize()
@@ -856,7 +856,7 @@ App.views.App = App.views.Base.extend
 			when 'get'
 				# Do nothing
 				break
-			
+
 			# Delete
 			when 'delete','remove'
 				if user
@@ -870,7 +870,7 @@ App.views.App = App.views.Base.extend
 					# and return null
 					users.remove(user.id)  if applyToCollection
 					user = null
-			
+
 			# Update, Create
 			when 'create','update','add'
 				# Update
@@ -879,7 +879,7 @@ App.views.App = App.views.Base.extend
 					# messages for this one are handled behind the scenes
 					unless data instanceof App.models.User
 						user.set(data)
-				
+
 				# Create
 				else
 					# Create the user with our passed data
@@ -890,7 +890,7 @@ App.views.App = App.views.Base.extend
 						user = new App.models.User()
 					user.set data  if data
 					users.add(user)  if applyToCollection
-				
+
 					# Subscribe to name changes so we can display the nameChange system message
 					user
 						.unbind('change:displayname',@onNameChange)
@@ -900,10 +900,10 @@ App.views.App = App.views.Base.extend
 					@systemMessage 'connected', {
 						user: user
 					}
-		
+
 		# Return user
 		user
-	
+
 
 	# Message
 	# Performs an action against our message
@@ -919,7 +919,7 @@ App.views.App = App.views.Base.extend
 			when 'get'
 				# Do nothing
 				break
-			
+
 			# Delete
 			when 'delete','remove'
 				if message
@@ -928,7 +928,7 @@ App.views.App = App.views.Base.extend
 					# and return null
 					messages.remove(data.id)  if applyToCollection
 					message = null
-			
+
 			# Update, Create
 			when 'create','update','add'
 				# Update
@@ -936,7 +936,7 @@ App.views.App = App.views.Base.extend
 					# Update our message with the data
 					unless data instanceof App.models.Message
 						message.set(data)
-				
+
 				# Create
 				else
 					# Create the message with our passed data
@@ -947,14 +947,14 @@ App.views.App = App.views.Base.extend
 						message = new App.models.Message()
 					message.set data  if data
 					messages.add(message)  if applyToCollection
-				
+
 				# Make mentions of us bold
 				messageContent = message.get('content') or ''
 				ourUserDisplayName = @model.get('user').get('displayname')
 				mentionString = "@#{ourUserDisplayName}"
 				messageContentEnhanced = messageContent.replace mentionString, "**#{mentionString}**"
 				if messageContentEnhanced isnt messageContent
-					message.set content: messageContentEnhanced  
+					message.set content: messageContentEnhanced
 
 				# Added?
 				if method is 'add'
@@ -963,7 +963,7 @@ App.views.App = App.views.Base.extend
 
 					# Notify
 					@systemMessage 'newMessage', {message}
-		
+
 		# Return message
 		message
 
@@ -982,7 +982,7 @@ App.views.App = App.views.Base.extend
 						avatar: messageAuthor.get('avatar')
 						content: message.get('content')
 					)
-			
+
 			when 'reconnected'
 				user = data.user
 				userColor = user.get('color')
@@ -992,7 +992,7 @@ App.views.App = App.views.Base.extend
 					author: @model.get('system')
 					content: "Welcome back <span style='color:#{userColor}'>#{userDisplayName}</span>"
 				}
-			
+
 			when 'welcome'
 				user = data.user
 				userColor = user.get('color')
@@ -1002,7 +1002,7 @@ App.views.App = App.views.Base.extend
 					author: @model.get('system')
 					content: "Welcome <span style='color:#{userColor}'>#{userDisplayName}</span>"
 				}
-			
+
 			when 'disconnected'
 				user = data.user
 				userColor = user.get('color')
@@ -1013,7 +1013,7 @@ App.views.App = App.views.Base.extend
 						author: @model.get('system')
 						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has disconnected"
 					}
-			
+
 			when 'nameChange'
 				user = data.user
 				userColor = user.get('color')
@@ -1024,7 +1024,7 @@ App.views.App = App.views.Base.extend
 						author: @model.get('system')
 						content: "<span style='color:#{userColor}'>#{userDisplayNameOld}</span> has changed their name to <span style='color:#{userColor}'>#{userDisplayNameNew}</span>"
 					}
-			
+
 			when 'connected'
 				user = data.user
 				userColor = user.get('color')
@@ -1035,17 +1035,17 @@ App.views.App = App.views.Base.extend
 						author: @model.get('system')
 						content: "<span style='color:#{userColor}'>#{userDisplayName}</span> has joined"
 					}
-		
+
 		# Chain
 		@
-	
+
 
 # =====================================
 # Application
 
 # Prepare
 $.timeago.settings.strings.seconds = "moments"
-socket = io.connect document.location.href.replace /(\/\/.+)\/.*$/, '$1'
+socket = io.connect(document.location.protocol+'//'+document.location.host)
 
 # Sync
 Backbone.sync = (method,model,options) ->

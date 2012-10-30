@@ -5,18 +5,17 @@ Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
 
 ## Play
 
-1. [Install DocPad](https://github.com/balupton/docpad) 
+1. [Get DocPad](http://docpad.org)
 
 1. Run
 
 	``` bash
 	git clone git://github.com/balupton/nodechat.docpad.git
 	cd nodechat.docpad
-	npm install
-	node script.js [port]
+	docpad run
 	```
 
-1. [Open http://localhost:10113/](http://localhost:10113/)
+1. [Open http://localhost:9778/](http://localhost:9778/)
 
 
 ## Features

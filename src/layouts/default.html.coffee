@@ -15,11 +15,12 @@ html lang: 'en', ->
 		title @document.title
 		meta name: 'description', content: @document.description or ''
 		meta name: 'author', content: @document.author or ''
+		text @getBlock('meta').toHTML()
 
 		# Styles
 		link rel: 'stylesheet', href: '/styles/style.css', media: 'screen, projection'
 		link rel: 'stylesheet', href: '/styles/print.css', media: 'print'
-		text @blocks.styles.join('')
+		text @getBlock('styles').toHTML()
 	body ->
 		# Document
 		text @content
@@ -38,4 +39,4 @@ html lang: 'en', ->
 		script src: '/vendor/html-sanitizer.js'
 		script src: '/socket.io/socket.io.js'
 		script src: '/scripts/script.js'
-		text @blocks.scripts.join('')
+		text @getBlock('scripts').toHTML()

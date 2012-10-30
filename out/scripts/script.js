@@ -33,7 +33,6 @@
   showNotification = function(_arg) {
     var avatar, content, notification, timer, title;
     title = _arg.title, content = _arg.content, avatar = _arg.avatar;
-    debugger;
     if (webkitNotifications && webkitNotifications.checkPermission() === 0) {
       avatar || (avatar = "");
       title || (title = "New message");
@@ -73,8 +72,8 @@
       avatar: null
     },
     initialize: function() {
-      var cid, color, displayname, hue, lightness, saturation;
-      var _this = this;
+      var cid, color, displayname, hue, lightness, saturation,
+        _this = this;
       cid = this.cid;
       color = this.get('color');
       displayname = this.get('displayname');
@@ -147,9 +146,11 @@
           }
         }
       });
-      this.set({
-        posted: !posted ? new Date() : void 0
-      });
+      if (!posted) {
+        this.set({
+          posted: new Date()
+        });
+      }
       return this;
     }
   });
@@ -196,8 +197,8 @@
       return $email = this.$('.email').val(email);
     },
     render: function() {
-      var $cancelButton, $closeButton, $displayname, $email, $id, $submitButton;
-      var _this = this;
+      var $cancelButton, $closeButton, $displayname, $email, $id, $submitButton,
+        _this = this;
       this.populate();
       $id = this.$('.id');
       $displayname = this.$('.displayname');
@@ -271,8 +272,8 @@
       return this;
     },
     populate: function() {
-      var $userList, users;
-      var _this = this;
+      var $userList, users,
+        _this = this;
       this.views = {};
       users = this.model;
       $userList = this.$('.userList').empty();
@@ -344,8 +345,8 @@
       return this;
     },
     populate: function() {
-      var $messageList, messages;
-      var _this = this;
+      var $messageList, messages,
+        _this = this;
       this.views = {};
       messages = this.model;
       $messageList = this.$('.messageList').empty();
@@ -403,8 +404,8 @@
       return this._initialize();
     },
     populate: function() {
-      var $button, $content, $footer, $primary, $title, button, buttons, content, title, _i, _len;
-      var _this = this;
+      var $button, $content, $footer, $primary, $title, button, buttons, content, title, _i, _len,
+        _this = this;
       title = this.options.title;
       content = this.options.content;
       buttons = this.options.buttons || [];
@@ -418,7 +419,9 @@
       for (_i = 0, _len = buttons.length; _i < _len; _i++) {
         button = buttons[_i];
         $button = $('<button>').addClass('btn').text(button.text || 'Ok');
-        if (button.primary) $button.addClass('primary');
+        if (button.primary) {
+          $button.addClass('primary');
+        }
         $button.click(button.click || function() {
           return _this.remove();
         });
@@ -474,8 +477,8 @@
       return this._initialize();
     },
     start: function($container) {
-      var connectedOnce, disconnectedModal, me, messages, socket, system, user, users;
-      var _this = this;
+      var connectedOnce, disconnectedModal, me, messages, socket, system, user, users,
+        _this = this;
       me = this;
       socket = this.options.socket;
       disconnectedModal = null;
@@ -513,7 +516,9 @@
         }
         return socket.emit('handshake', function(err, _ourUserId, _ourUser, _users) {
           var _user, _userId;
-          if (err) throw err;
+          if (err) {
+            throw err;
+          }
           if (_ourUser) {
             user.set(_ourUser);
           } else {
@@ -567,8 +572,8 @@
       return this;
     },
     render: function() {
-      var $editUserButton, $messageInput, $messages, $notificationList, $userForm, $users, messages, user, users;
-      var _this = this;
+      var $editUserButton, $messageInput, $messages, $notificationList, $userForm, $users, messages, user, users,
+        _this = this;
       user = this.model.get('user');
       users = this.model.get('users');
       messages = this.model.get('messages');
@@ -579,17 +584,23 @@
       $messageInput = this.$('.messageInput');
       $notificationList = this.$('.notificationList');
       this.views = {};
-      if (this.views.messages) this.views.messages.remove();
+      if (this.views.messages) {
+        this.views.messages.remove();
+      }
       this.views.messages = new App.views.Messages({
         model: messages,
         container: $messages.empty()
       }).render();
-      if (this.views.users) this.views.users.remove();
+      if (this.views.users) {
+        this.views.users.remove();
+      }
       this.views.users = new App.views.Users({
         model: users,
         container: $users.empty()
       }).render();
-      if (this.views.userForm) this.views.userForm.remove();
+      if (this.views.userForm) {
+        this.views.userForm.remove();
+      }
       this.views.userForm = new App.views.UserForm({
         model: user,
         container: $userForm.empty()
@@ -612,8 +623,8 @@
       return this;
     },
     resize: function() {
-      var $header, $messageForm, $messagesView, $messagesWrapper, $usersWrapper, $window;
-      var _this = this;
+      var $header, $messageForm, $messagesView, $messagesWrapper, $usersWrapper, $window,
+        _this = this;
       $window = $(window);
       $header = this.$('.header.topbar');
       $messagesWrapper = this.$('.messages.wrapper');
@@ -631,8 +642,12 @@
     onUserClick: function(event) {
       var $messageInput, $user, messageContent, user, userDisplayname, view;
       $user = $(event.target);
-      if (!$user.is('.user.view')) $user = $user.parents('.user.view:first');
-      if ($user.length === 0) return;
+      if (!$user.is('.user.view')) {
+        $user = $user.parents('.user.view:first');
+      }
+      if ($user.length === 0) {
+        return;
+      }
       $messageInput = this.$('.messageInput');
       view = $user.data('view');
       user = view.model;
@@ -673,7 +688,9 @@
       data || (data = {});
       users = this.model.get('users');
       user = users.get(data.id);
-      if (applyToCollection == null) applyToCollection = true;
+      if (applyToCollection == null) {
+        applyToCollection = true;
+      }
       switch (method) {
         case 'get':
           break;
@@ -683,7 +700,9 @@
             this.systemMessage('disconnected', {
               user: user
             });
-            if (applyToCollection) users.remove(user.id);
+            if (applyToCollection) {
+              users.remove(user.id);
+            }
             user = null;
           }
           break;
@@ -691,15 +710,21 @@
         case 'update':
         case 'add':
           if (user) {
-            if (!(data instanceof App.models.User)) user.set(data);
+            if (!(data instanceof App.models.User)) {
+              user.set(data);
+            }
           } else {
             if (data instanceof App.models.User) {
               user = data;
             } else {
               user = new App.models.User();
             }
-            if (data) user.set(data);
-            if (applyToCollection) users.add(user);
+            if (data) {
+              user.set(data);
+            }
+            if (applyToCollection) {
+              users.add(user);
+            }
             user.unbind('change:displayname', this.onNameChange).bind('change:displayname', this.onNameChange);
             this.systemMessage('connected', {
               user: user
@@ -712,14 +737,18 @@
       var mentionString, message, messageContent, messageContentEnhanced, messages, ourUserDisplayName;
       messages = this.model.get('messages');
       message = messages.get(data.id);
-      if (applyToCollection == null) applyToCollection = true;
+      if (applyToCollection == null) {
+        applyToCollection = true;
+      }
       switch (method) {
         case 'get':
           break;
         case 'delete':
         case 'remove':
           if (message) {
-            if (applyToCollection) messages.remove(data.id);
+            if (applyToCollection) {
+              messages.remove(data.id);
+            }
             message = null;
           }
           break;
@@ -727,15 +756,21 @@
         case 'update':
         case 'add':
           if (message) {
-            if (!(data instanceof App.models.Message)) message.set(data);
+            if (!(data instanceof App.models.Message)) {
+              message.set(data);
+            }
           } else {
             if (data instanceof App.models.Message) {
               message = data;
             } else {
               message = new App.models.Message();
             }
-            if (data) message.set(data);
-            if (applyToCollection) messages.add(message);
+            if (data) {
+              message.set(data);
+            }
+            if (applyToCollection) {
+              messages.add(message);
+            }
           }
           messageContent = message.get('content') || '';
           ourUserDisplayName = this.model.get('user').get('displayname');
@@ -756,7 +791,7 @@
       return message;
     },
     systemMessage: function(code, data) {
-      var message, messageAuthor, ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref2, _ref3;
+      var message, messageAuthor, ourUser, user, userColor, userDisplayName, userDisplayNameNew, userDisplayNameOld, _ref, _ref1, _ref2;
       switch (code) {
         case 'newMessage':
           message = data.message;
@@ -795,7 +830,7 @@
           userColor = user.get('color');
           userDisplayName = user.get('displayname');
           ourUser = this.model.get('user') || {};
-          if ((_ref2 = user.id) !== 'system' && _ref2 !== ourUser.id) {
+          if ((_ref1 = user.id) !== 'system' && _ref1 !== ourUser.id) {
             this.message('create', {
               author: this.model.get('system'),
               content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has disconnected"
@@ -819,7 +854,7 @@
           userColor = user.get('color');
           userDisplayName = user.get('displayname');
           ourUser = this.model.get('user') || {};
-          if ((_ref3 = user.id) !== 'system' && _ref3 !== ourUser.id) {
+          if ((_ref2 = user.id) !== 'system' && _ref2 !== ourUser.id) {
             this.message('create', {
               author: this.model.get('system'),
               content: "<span style='color:" + userColor + "'>" + userDisplayName + "</span> has joined"
@@ -832,13 +867,15 @@
 
   $.timeago.settings.strings.seconds = "moments";
 
-  socket = io.connect(document.location.href.replace(/(\/\/.+)\/.*$/, '$1'));
+  socket = io.connect(document.location.protocol + '//' + document.location.host);
 
   Backbone.sync = function(method, model, options) {
     var data;
     data = model.toJSON();
     return socket.emit(model.url, method, data, function(err, data) {
-      if (err) throw err;
+      if (err) {
+        throw err;
+      }
       return typeof options.success === "function" ? options.success(data) : void 0;
     });
   };
