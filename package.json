@@ -34,8 +34,5 @@
 		"docpad-plugin-coffeekup": "2.x",
 		"docpad-plugin-stylus": "2.x"
 	},
-	"devDependencies": {
-		"docpad-plugin-livereload": "2.x"
-	},
 	"main": "./out/main.js"
 }
