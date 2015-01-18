@@ -1,6 +1,6 @@
 # Node Chat (using DocPad)
 
-Built using Socket.io, DocPad, Backbone.js and Twitter Bootstrap
+Built using Socket.io, DocPad, Backbone.js and Bootstrap
 
 
 ## Play
@@ -61,9 +61,9 @@ Node Chat was built with the following emphasis
 	- All the models are written as Backbone models and collections
 		- Allows us to automaticly update views when a model changes
 		- Allows us to easily sync models to the server
-- Twitter Bootstrap provides our styling and design
+- Bootstrap provides our styling and design
 
-These technologies work together really really well, as because a chat application is real-time (always having things changing, even without user interaction) we need a frontend implemetnation that is real-time too. Backbone.js and Socket.io fit perfectly for this, backbone.js provides the frontend infrastructure to provide a real-time / live-updating frontend interface, where socket.io provides the backend toolkit to sync the events. DocPad was a natural choice as it allows us to write our code in modern markups which greatly improves productivity, readability, and prevents errors.
+These technologies work together really really well, as because a chat application is real-time (always having things changing, even without user interaction) we need a frontend implementation that is real-time too. Backbone.js and Socket.io fit perfectly for this, backbone.js provides the frontend infrastructure to provide a real-time / live-updating frontend interface, where socket.io provides the backend toolkit to sync the events. DocPad was a natural choice as it allows us to write our code in modern markups which greatly improves productivity, readability, and prevents errors.
 
 
 ## Todo / Known-issues
